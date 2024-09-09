@@ -233,7 +233,7 @@ transform_t transform_t::make_naive_transform(
   };
 }
 
-vector<transform_t::move_t> transform_t::make_moves(
+vector<move_t> transform_t::make_moves(
   placement_t const& inn_pl,
   placement_t const& out_pl,
   transform_t const& transform)

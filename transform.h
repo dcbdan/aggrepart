@@ -2,6 +2,7 @@
 #include "setup.h"
 
 #include "placement.h"
+#include "cost.h" // for move_t
 
 struct transform_t {
   struct piece_t {
@@ -24,11 +25,6 @@ struct transform_t {
     placement_t const& inn_pl,
     placement_t const& out_pl);
 
-  struct move_t {
-    int src;
-    int dst;
-    uint64_t size;
-  };
   static vector<move_t> make_moves(
     placement_t const& inn_pl,
     placement_t const& out_pl,
