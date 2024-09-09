@@ -3,9 +3,7 @@
 
 #include "partdim.h"
 #include "touch.h"
-
-template typename <T>
-using hrect_t = vector<tuple<T, T>>;
+#include "hrect.h"
 
 struct partition_t {
   vector<partdim_t> partdims;
@@ -39,7 +37,7 @@ struct partition_t {
     hrect_t<uint64_t> const& region) const;
 
   tuple<vector<int>, touch_t>
-  subset_covering_block(hrect_t<uint64_t> region) const;
+  subset_covering_block(hrect_t<uint64_t> const& region) const;
 };
 
 tuple<vector<int>, vector<int>, touch_t>

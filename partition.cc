@@ -25,7 +25,7 @@ partition_t partition_t::intersect(partition_t lhs, partition_t rhs) {
   }
 
   return partition_t {
-    .partdims = ret;
+    .partdims = ret
   };
 }
 
@@ -41,7 +41,7 @@ vector<int> partition_t::block_shape() const {
   return vector_from_each_method(partdims, int, num_parts);
 }
 
-int partition_t::rank const {
+int partition_t::rank() const {
   return partdims.size();
 }
 
@@ -144,7 +144,7 @@ partition_t::subset_covering_block(hrect_t<uint64_t> const& region) const
     .op = std::nullopt
   };
 
-  return {op, idx};
+  return {idx, op};
 }
 
 tuple<vector<int>, vector<int>, touch_t>
@@ -158,10 +158,10 @@ touch_from_covered_region(
   }
 
   vector<int> inn_idx = inn.get_covering_block(region);
-  hrect_t<uint64_t> inn_full_region = inn.get_region(idx);
+  hrect_t<uint64_t> inn_full_region = inn.get_region(inn_idx);
 
   vector<int> out_idx = out.get_covering_block(region);
-  hrect_t<uint64_t> out_full_region = out.get_region(idx);
+  hrect_t<uint64_t> out_full_region = out.get_region(out_idx);
 
   vector<touch_t::dim_t> dims;
   for(int i = 0; i != region.size(); ++i) {

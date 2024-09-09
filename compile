@@ -1,1 +1,2 @@
-g++ -o exp main.cc setup.cc indexer.cc partdim.cc partition.cc placement.cc relation.cc touch.cc graph.cc
+#g++ -o exp main.cc setup.cc indexer.cc partdim.cc partition.cc placement.cc relation.cc touch.cc graph.cc
+g++ -o exp main.cc setup.cc indexer.cc hrect.cc partdim.cc partition.cc placement.cc transform.cc

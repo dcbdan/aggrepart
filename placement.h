@@ -8,7 +8,7 @@
 // 1. A partition, for how a tensors is partitioned along _output_ axis
 // 2. The locations that each sub-tensor must live
 // Note that "shape" of locations is one dimension higher to represent the
-// duplication of the partition---these are the agg dims.
+// partials that need to be aggregated together.
 //
 // Example:
 //   partition blocks is 3 x 4
@@ -25,12 +25,12 @@ struct placement_t {
 
   vector<uint64_t> total_shape() const { return partition.total_shape(); }
 
-  int num_duplicates() const; // TODO
+  int num_partials() const;
 
-  bool has_duplicates() const { return num_duplicates > 1; }
+  bool has_partials() const { return num_partials() > 1; }
 
-  set<int> broadcasted_subtensors() const; // TODO
+  set<int> broadcasted_subtensors() const;
 
-  bool has_broadcasted_subtensors() const { return broadcasted_subtensors.size() > 0; }
+  bool has_broadcasted_subtensors() const { return broadcasted_subtensors().size() > 0; }
 };
 

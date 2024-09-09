@@ -297,15 +297,15 @@ vector<U> vector_mapsnd(vector<tuple<T, U>> const& xys) {
 }
 
 template <typename T>
-void set_append(set<int>& out, set<int> const& other) {
-  for(auto const& v: other) {
+void set_append(set<T>& out, set<T> const& other) {
+  for(T const& v: other) {
     out.insert(v);
   }
 }
 
 template <typename T>
-set<int> set_union(set<int> const& lhs, set<int> const& rhs) {
-  set<int> ret = lhs;
+set<T> set_union(set<T> const& lhs, set<T> const& rhs) {
+  set<T> ret = lhs;
   set_append(ret, rhs);
   return ret;
 }
