@@ -1,4 +1,5 @@
 #include "partition.h"
+#include "indexer.h"
 
 partition_t partition_t::singleton(vector<uint64_t> shape) {
   vector<partdim_t> partdims;
@@ -196,3 +197,12 @@ std::ostream& operator<<(std::ostream& out, partition_t const& p) {
   out << "partition" << p.partdims;
   return out;
 }
+
+vector<int> partition_t::block_to_index(int block) const {
+  return index_to_idxs(block_shape(), block);
+}
+
+int partition_t::index_to_block(vector<int> const& index) const {
+  return idxs_to_index(block_shape(), index);
+}
+

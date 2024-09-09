@@ -15,3 +15,14 @@ int placement_t::num_partials() const {
   throw std::runtime_error("invalid ranks in placement");
 }
 
+set<int> const& placement_t::get_locs(vector<int> index, int partial) const
+{
+  index.push_back(partial);
+  return locations.at(index);
+}
+
+set<int> const& placement_t::get_locs(int block, int partial) const
+{
+  return get_locs(partition.block_to_index(block), partial);
+}
+

@@ -34,5 +34,3 @@ struct transform_t {
     placement_t const& out_pl,
     transform_t const& ops);
 };
-
-

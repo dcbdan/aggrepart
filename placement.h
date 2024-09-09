@@ -32,5 +32,8 @@ struct placement_t {
   set<int> broadcasted_subtensors() const;
 
   bool has_broadcasted_subtensors() const { return broadcasted_subtensors().size() > 0; }
+
+  set<int> const& get_locs(vector<int> index, int partial) const;
+  set<int> const& get_locs(int block, int partial) const;
 };
 

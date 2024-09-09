@@ -69,6 +69,22 @@ using std::string;
 
 
 template <typename T>
+bool set_equal(set<T> const& xs, set<T> const& ys) {
+  if(xs.size() != ys.size()) {
+    return false;
+  }
+  auto xiter = xs.begin();
+  auto yiter = ys.begin();
+  for(; xiter != xs.end(); ++xiter, ++yiter) {
+    if(*xiter != *yiter) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template <typename T>
 bool vector_equal(vector<T> const& xs, vector<T> const& ys) {
   if(xs.size() != ys.size()) {
     return false;
@@ -127,6 +143,7 @@ void print_vec(std::ostream& out, vector<T> const& xs)
   out << "}";
 }
 
+vector<int> divide_evenly_int(int num_parts, int n);
 vector<uint64_t> divide_evenly(int num_parts, uint64_t n);
 
 template <typename T>

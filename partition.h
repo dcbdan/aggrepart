@@ -38,6 +38,9 @@ struct partition_t {
 
   tuple<vector<int>, touch_t>
   subset_covering_block(hrect_t<uint64_t> const& region) const;
+
+  vector<int> block_to_index(int block) const;
+  int index_to_block(vector<int> const& index) const;
 };
 
 tuple<vector<int>, vector<int>, touch_t>
