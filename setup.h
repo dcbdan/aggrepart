@@ -123,12 +123,6 @@ T product(vector<T> const& xs)
 }
 
 template <typename T>
-void print_vec(vector<T> const& xs)
-{
-  print_vec(std::cout, xs);
-}
-
-template <typename T>
 void print_vec(std::ostream& out, vector<T> const& xs)
 {
   out << "{";
@@ -141,6 +135,31 @@ void print_vec(std::ostream& out, vector<T> const& xs)
     }
   }
   out << "}";
+}
+
+template <typename T>
+void print_set(std::ostream& out, set<T> const& xs)
+{
+  auto iter = xs.begin();
+  out << "s{";
+  if(xs.size() >= 1) {
+    out << (*iter++);
+  }
+  for(; iter != xs.end(); ++iter) {
+    out << "," << (*iter);
+  }
+  out << "}";
+}
+
+template <typename T>
+void print_vec(vector<T> const& xs)
+{
+  print_vec(std::cout, xs);
+}
+
+template <typename T>
+void print_set(set<T> const& xs) {
+  print_set(std::cout, xs);
 }
 
 vector<int> divide_evenly_int(int num_parts, int n);
@@ -191,8 +210,7 @@ std::ostream& operator<<(std::ostream& out, vector<T> const& ts) {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& out, set<T> const& ts) {
-  // TODO: implement print_set
-  print_vec(out, vector<T>(ts.begin(), ts.end()));
+  print_set(out, ts);
   return out;
 }
 

@@ -1,5 +1,16 @@
 #include "placement.h"
 
+placement_t placement_t::make(partition_t const& partition, int num_partials)
+{
+  vector<int> block_partial_shape = partition.block_shape();
+  block_partial_shape.push_back(num_partials);
+
+  return placement_t {
+    .partition = partition,
+    .locations = vtensor_t<set<int>>(block_partial_shape)
+  };
+}
+
 int placement_t::num_partials() const {
   vector<int> block_shape = partition.block_shape();
   vector<int> locs_shape = locations.get_shape();

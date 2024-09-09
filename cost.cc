@@ -42,3 +42,7 @@ uint64_t compute_total_cost(
   return ret;
 }
 
+std::ostream& operator<<(std::ostream& out, move_t const& m) {
+  out << "move{" << m.src << "->" << m.dst << "|" << m.size << "}";
+  return out;
+}

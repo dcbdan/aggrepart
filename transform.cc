@@ -57,6 +57,7 @@ bool transform_t::valid(
     if(!did_insert) {
       // you can't write the same partial to (mid block, out partial, out loc)
       // twice!
+      DLINE;
       return false;
     }
   }
@@ -67,16 +68,25 @@ bool transform_t::valid(
     do {
       vector<set<int>> inn_partials;
       for(int p = 0; p != num_out_partials; ++p) {
+        // dd: out_loc -> inn partials
         map<int, set<int>> dd = mid_info_at(mid_idx, p);
+        // dd should contain for the same set of partials for all
+        // locations and there should be atleast one location with values
+
         auto iter = dd.begin();
         if(iter == dd.end()) {
-          throw std::runtime_error("should not happen");
+          DLINE;
+          // no locations with values
+          return false;
         }
         inn_partials.push_back(iter->second);
         iter++;
         for(; iter != dd.end(); ++iter) {
           if(!set_equal(inn_partials[p], iter->second)) {
+            print_set(inn_partials[p]); std::cout << std::endl;
+            print_set(iter->second);    std::cout << std::endl;
             // In this case, we have the same partial but they have different values
+            DLINE;
             return false;
           }
         }
@@ -92,6 +102,7 @@ bool transform_t::valid(
       }
       for(int p = 0; p != num_inn_partials; ++p) {
         if(counts[p] != 1) {
+          DLINE;
           return false;
         }
       }
@@ -100,7 +111,7 @@ bool transform_t::valid(
 
   // Make sure each (mid block, out partial, out loc) pair is written to exactly once
 
-  auto get_inn_index = [&](vector<int> const& mid_index)
+  auto get_out_index = [&](vector<int> const& mid_index)
   {
     hrect_t<uint64_t> region = mid_part.get_region(mid_index);
     hrect_t<int> ret = out_part.get_exact_covering_blocks(region);
@@ -119,9 +130,12 @@ bool transform_t::valid(
           mid_locs.insert(loc);
         }
 
-        set<int> const& out_locs = inn_pl.get_locs(get_inn_index(mid_idx), p);
+        set<int> const& out_locs = out_pl.get_locs(get_out_index(mid_idx), p);
 
         if(!set_equal(mid_locs, out_locs)) {
+          DOUT(mid_locs);
+          DOUT(out_locs);
+          DLINE;
           return false;
         }
       }
@@ -178,19 +192,22 @@ transform_t transform_t::make_naive_transform(
     };
   };
 
-  map<int, int> loc_counts;
-  auto pick_next_loc = [&](set<int> const& locs) {
-    auto iter = locs.begin();
-    int ret = *iter;
-    int best = loc_counts[ret];
-    for(; iter != locs.end(); ++iter) {
-      int other = loc_counts[*iter];
-      if(other < best) {
+  map<int, map<int, int>> src_dst_counts;
+  auto pick_next_src = [&](set<int> const& src_locs, int dst) {
+    if(src_locs.size() == 0) {
+      throw std::runtime_error("empty src locs");
+    }
+    auto iter = src_locs.begin();
+    int ret = *iter++;
+    int best = src_dst_counts[ret][dst];
+    iter++;
+    for(; iter != src_locs.end(); ++iter) {
+      int cnt = src_dst_counts[*iter][dst];
+      if(cnt < best) {
         ret = *iter;
-        best = other;
+        best = cnt;
       }
     }
-    loc_counts[ret]++;
     return ret;
   };
 
@@ -198,11 +215,11 @@ transform_t transform_t::make_naive_transform(
     -> vector<tuple<int, int>>
   {
     vector<tuple<int, int>> ret;
-    for(int const& inn: inn_locs) {
-      if(out_locs.count(inn) == 1) {
-        ret.emplace_back(inn, inn);
+    for(int const& out: out_locs) {
+      if(inn_locs.count(out) == 1) {
+        ret.emplace_back(out, out);
       } else {
-        ret.emplace_back(inn, pick_next_loc(out_locs));
+        ret.emplace_back(pick_next_src(inn_locs, out), out);
       }
     }
     return ret;

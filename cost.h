@@ -27,3 +27,4 @@ uint64_t compute_total_cost(
   topology_t const& topology,
   vector<move_t> const& moves);
 
+std::ostream& operator<<(std::ostream& out, move_t const& m);

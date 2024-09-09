@@ -23,6 +23,8 @@ struct placement_t {
   partition_t partition;
   vtensor_t<set<int>> locations;
 
+  static placement_t make(partition_t const& partition, int num_partials);
+
   vector<uint64_t> total_shape() const { return partition.total_shape(); }
 
   int num_partials() const;
