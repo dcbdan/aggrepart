@@ -37,5 +37,8 @@ struct placement_t {
 
   set<int> const& get_locs(vector<int> index, int partial) const;
   set<int> const& get_locs(int block, int partial) const;
+
+  set<int>& get_locs(vector<int> index, int partial);
+  set<int>& get_locs(int block, int partial);
 };
 

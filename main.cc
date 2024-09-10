@@ -5,31 +5,31 @@
 #include "transform.h"
 #include "cost.h"
 
-int main(int argc, char** argv) {
-  // TODO: create several variants of all reduce
+topology_t make_fully_connected_topology(
+  int num_devices, uint64_t time_per_byte, uint64_t latency)
+{
+  topology_t ret;
+  for(int src = 0; src != num_devices; ++src) {
+  for(int dst = 0; dst != num_devices; ++dst) {
+    if(src != dst) {
+      ret.insert_wire(src, dst, time_per_byte, latency);
+    }
+  }}
+  return ret;
+}
 
-  int num_devices = 4;
-
-  topology_t topology;
+tuple<placement_t, placement_t> make_all_reduce(
+  int num_devices,
+  vector<uint64_t> shape)
+{
+  partition_t partition;
   {
-    uint64_t latency = 1;
-    uint64_t time_per_byte = 1;
-    for(int src = 0; src != num_devices; ++src) {
-    for(int dst = 0; dst != num_devices; ++dst) {
-      if(src != dst) {
-        topology.insert_wire(src, dst, time_per_byte, latency);
-      }
-    }}
+    vector<partdim_t> pds;
+    for(uint64_t const& d: shape) {
+      pds.push_back(partdim_t::singleton(d));
+    }
+    partition = partition_t { .partdims = pds };
   }
-
-  uint64_t ni = 10000;
-  uint64_t nj = 10000;
-
-  partition_t partition {
-    .partdims = { partdim_t::singleton(ni), partdim_t::singleton(nj) }
-  };
-
-  // create src and dst pl to represent an all reduce op
 
   placement_t src_pl = placement_t::make(partition, num_devices);
   {
@@ -46,6 +46,23 @@ int main(int argc, char** argv) {
       locs.insert(i);
     }
   }
+
+  return {src_pl, dst_pl};
+}
+
+int main(int argc, char** argv) {
+  // TODO: create several variants of all reduce
+
+  int num_devices = 4;
+  uint64_t latency = 1;
+  uint64_t time_per_byte = 1;
+  topology_t topology =
+    make_fully_connected_topology(num_devices, time_per_byte, latency);
+
+  uint64_t ni = 10000;
+  uint64_t nj = 10000;
+
+  auto [src_pl, dst_pl] = make_all_reduce(num_devices, {ni, nj});
 
   {
     transform_t naive_transform = transform_t::make_naive_transform(src_pl, dst_pl);

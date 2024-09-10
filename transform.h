@@ -29,4 +29,9 @@ struct transform_t {
     placement_t const& inn_pl,
     placement_t const& out_pl,
     transform_t const& ops);
+
+  static placement_t make_placement(
+    placement_t const& inn_pl,
+    partition_t const& out_part,
+    transform_t const& ops);
 };

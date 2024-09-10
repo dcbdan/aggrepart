@@ -37,3 +37,14 @@ set<int> const& placement_t::get_locs(int block, int partial) const
   return get_locs(partition.block_to_index(block), partial);
 }
 
+set<int>& placement_t::get_locs(vector<int> index, int partial)
+{
+  index.push_back(partial);
+  return locations.at(index);
+}
+
+set<int>& placement_t::get_locs(int block, int partial)
+{
+  return get_locs(partition.block_to_index(block), partial);
+}
+

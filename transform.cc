@@ -285,3 +285,27 @@ vector<move_t> transform_t::make_moves(
   return ret;
 }
 
+placement_t transform_t::make_placement(
+  placement_t const& inn_pl,
+  partition_t const& out_part,
+  transform_t const& transform)
+{
+  int num_partials = 1;
+  for(auto const& [_, out_piece]: transform.ops) {
+    num_partials = std::max(num_partials, out_piece.partial+1);
+  }
+
+  placement_t ret = placement_t::make(out_part, num_partials);
+
+  for(auto const& [_, out_piece]: transform.ops) {
+    auto const& [block, partial, loc] = out_piece;
+    ret.get_locs(block, partial).insert(loc);
+  }
+
+  if(!valid(inn_pl, ret, transform)) {
+    throw std::runtime_error("invalid: transform_t::make_placement");
+  }
+
+  return ret;
+}
+
