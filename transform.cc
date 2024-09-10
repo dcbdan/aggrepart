@@ -133,8 +133,6 @@ bool transform_t::valid(
         set<int> const& out_locs = out_pl.get_locs(get_out_index(mid_idx), p);
 
         if(!set_equal(mid_locs, out_locs)) {
-          DOUT(mid_locs);
-          DOUT(out_locs);
           DLINE;
           return false;
         }
@@ -285,7 +283,7 @@ vector<move_t> transform_t::make_moves(
   return ret;
 }
 
-placement_t transform_t::make_placement(
+optional<placement_t> transform_t::make_placement(
   placement_t const& inn_pl,
   partition_t const& out_part,
   transform_t const& transform)
@@ -303,9 +301,19 @@ placement_t transform_t::make_placement(
   }
 
   if(!valid(inn_pl, ret, transform)) {
-    throw std::runtime_error("invalid: transform_t::make_placement");
+    return std::nullopt;
   }
 
-  return ret;
+  return optional<placement_t>(ret);
 }
 
+std::ostream& operator<<(std::ostream& out, transform_t::piece_t const& x) {
+  auto const& [block,partial,loc] = x;
+  out << "(" << block << "," << partial << ")@" << loc;
+  return out;
+}
+std::ostream& operator<<(std::ostream& print, transform_t::convert_t const& x) {
+  auto const& [inn,out] = x;
+  print << "{" << inn << "->" << out << "}";
+  return print;
+}

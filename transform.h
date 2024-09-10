@@ -19,7 +19,7 @@ struct transform_t {
   static bool valid(
     placement_t const& inn_pl,
     placement_t const& out_pl,
-    transform_t const& ops);
+    transform_t const& transform);
 
   static transform_t make_naive_transform(
     placement_t const& inn_pl,
@@ -28,10 +28,13 @@ struct transform_t {
   static vector<move_t> make_moves(
     placement_t const& inn_pl,
     placement_t const& out_pl,
-    transform_t const& ops);
+    transform_t const& transform);
 
-  static placement_t make_placement(
+  static optional<placement_t> make_placement(
     placement_t const& inn_pl,
     partition_t const& out_part,
-    transform_t const& ops);
+    transform_t const& transform);
 };
+
+std::ostream& operator<<(std::ostream& out, transform_t::piece_t const&);
+std::ostream& operator<<(std::ostream& out, transform_t::convert_t const&);
