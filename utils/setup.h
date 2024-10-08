@@ -339,10 +339,14 @@ void set_append(set<T>& out, set<T> const& other) {
 }
 
 template <typename T>
-set<T> set_union(set<T> const& lhs, set<T> const& rhs) {
+[[nodiscard]] set<T> set_union(set<T> const& lhs, set<T> const& rhs) {
   set<T> ret = lhs;
   set_append(ret, rhs);
   return ret;
+}
+template <typename T>
+void set_union_into(set<T>& ret, set<T> const& xs) {
+  set_append(ret, xs);
 }
 
 template <typename T>

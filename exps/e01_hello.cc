@@ -4,6 +4,8 @@
 #include "../repr/graph.h"
 #include "../repr/cost.h"
 
+#include "../solve/sol.h"
+
 int main() {
   DOUT("hello");
 }

@@ -10,10 +10,12 @@ set (CMAKE_CXX_STANDARD 17)
 
 file(GLOB UTILS_FILES ${PROJECT_SOURCE_DIR}/utils/*.cc)
 file(GLOB REPR_FILES ${PROJECT_SOURCE_DIR}/repr/*.cc)
+file(GLOB SOLVE_FILES ${PROJECT_SOURCE_DIR}/solve/*.cc)
 add_library(aggrepart
   STATIC
   ${UTILS_FILES}
   ${REPR_FILES}
+  ${SOLVE_FILES}
 )
 
 function(add_experiment name)
