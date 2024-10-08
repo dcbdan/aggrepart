@@ -1,5 +1,5 @@
 #pragma once
-#include "setup.h"
+#include "../utils/setup.h"
 
 struct partdim_t {
   static partdim_t from_spans(vector<uint64_t> const& spans);

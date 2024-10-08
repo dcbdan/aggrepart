@@ -55,13 +55,13 @@ touch_t touch_t::intersect(
     throw std::runtime_error("invalid touch intersect args");
   }
 
-  mid_region = hrect_intersect(inn_region, out_region);
+  hrect_t<uint64_t> mid_region = hrect_intersect(inn_region, out_region);
 
   vector<dim_t> dims;
   for(int idx = 0; idx != inn_region.size(); ++idx) {
-    auto const& [ib,ie] = inn_region[i];
-    auto const& [ob,oe] = out_region[i];
-    auto const& [mb,me] = mid_region[i];
+    auto const& [ib,ie] = inn_region[idx];
+    auto const& [ob,oe] = out_region[idx];
+    auto const& [mb,me] = mid_region[idx];
 
     dims.push_back(dim_t {
       .d_inn      = ie-ib,

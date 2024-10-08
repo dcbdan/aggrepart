@@ -1,7 +1,7 @@
 #pragma once
-#include "setup.h"
+#include "../utils/setup.h"
+#include "../utils/vtensor.h"
 
-#include "vtensor.h"
 #include "partition.h"
 
 // A plcement contains two components:
@@ -42,3 +42,7 @@ struct placement_t {
   set<int>& get_locs(int block, int partial);
 };
 
+int _num_partials(
+  vector<int> const& block_shape,
+  vector<int> const& elems_shape,
+  string const& error_header);

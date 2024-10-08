@@ -1,5 +1,5 @@
 #pragma once
-#include "setup.h"
+#include "../utils/setup.h"
 
 struct move_t {
   int src;

@@ -1,7 +1,6 @@
 #pragma once
-#include "setup.h"
-
-#include "hrect.h"
+#include "../utils/setup.h"
+#include "../utils/hrect.h"
 
 enum class castable_t {
   add,

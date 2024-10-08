@@ -1,5 +1,5 @@
 #include "partition.h"
-#include "indexer.h"
+#include "../utils/indexer.h"
 
 partition_t partition_t::singleton(vector<uint64_t> shape) {
   vector<partdim_t> partdims;

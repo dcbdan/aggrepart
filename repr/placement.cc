@@ -12,18 +12,8 @@ placement_t placement_t::make(partition_t const& partition, int num_partials)
 }
 
 int placement_t::num_partials() const {
-  vector<int> block_shape = partition.block_shape();
-  vector<int> locs_shape = locations.get_shape();
-
-  if(block_shape.size() == locs_shape.size()) {
-    throw std::runtime_error("must have partial dimension in locs");
-  }
-
-  if(block_shape.size() + 1 == locs_shape.size()) {
-    return locs_shape.back();
-  }
-
-  throw std::runtime_error("invalid ranks in placement");
+  return _num_partials(
+    partition.block_shape(), locations.get_shape(), "placement");
 }
 
 set<int> const& placement_t::get_locs(vector<int> index, int partial) const
@@ -46,5 +36,21 @@ set<int>& placement_t::get_locs(vector<int> index, int partial)
 set<int>& placement_t::get_locs(int block, int partial)
 {
   return get_locs(partition.block_to_index(block), partial);
+}
+
+int _num_partials(
+  vector<int> const& block_shape,
+  vector<int> const& elems_shape,
+  string const& msg)
+{
+  if(block_shape.size() == elems_shape.size()) {
+    throw std::runtime_error(msg + ": must have partial dimension in elems");
+  }
+
+  if(block_shape.size() + 1 == elems_shape.size()) {
+    return elems_shape.back();
+  }
+
+  throw std::runtime_error(msg + ": invalid ranks in placement");
 }
 

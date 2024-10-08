@@ -1,5 +1,5 @@
 #pragma once
-#include "setup.h"
+#include "../utils/setup.h"
 
 #include "touch.h"
 
@@ -11,14 +11,32 @@ struct graph_t {
   };
 
   struct tensor_t {
-    int loc;
-    vector<uint64_t> shape;
-    tensor_type_t type;
+    tensor_t();
+
+    tensor_t(int loc, vector<uint64_t> shape, tensor_type_t type);
+
+    int loc() const { return _loc; }
+
+    vector<uint64_t> const& shape() { return _shape; }
+    int rank() const { return _shape.size(); }
+
+    tensor_type_t type() const { return _type; }
+
+    void write_with();
+
+    void insert_write(int gid);
+
+    bool is_read_only() const { return read_only; }
+
+    set<int> writes() const { return _writes; }
+  private:
+    int _loc;
+    vector<uint64_t> _shape;
+    tensor_type_t _type;
+    bool read_only;
 
     // all graph ids that have writen to this tensor
-    set<int> writes;
-
-    int rank() const { return shape.size(); }
+    set<int> _writes;
   };
 
   struct move_t {
@@ -36,6 +54,8 @@ struct graph_t {
   };
 
   void _verify_deps(set<int> const& deps);
+
+  void _mark_write(int gid, tensor_t& src, tensor_t& dst);
 
   // Insert a move node
   int move(int src_tensor_id, int dst_tensor_id, set<int> direct_deps = {});

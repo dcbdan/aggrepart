@@ -1,9 +1,9 @@
 #pragma once
-#include "setup.h"
+#include "../utils/setup.h"
+#include "../utils/hrect.h"
 
 #include "partdim.h"
 #include "touch.h"
-#include "hrect.h"
 
 struct partition_t {
   vector<partdim_t> partdims;
