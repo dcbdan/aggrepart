@@ -49,6 +49,11 @@ touch_from_covered_region(
   partition_t const& inn,
   partition_t const& out);
 
+std::function<hrect_t<int>(vector<int> const&)>
+build_get_refi_index_region(
+  partition_t const& coarse_part,
+  partition_t const& refined_part);
+
 bool operator==(partition_t const& lhs, partition_t const& rhs);
 bool operator!=(partition_t const& lhs, partition_t const& rhs);
 

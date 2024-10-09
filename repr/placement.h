@@ -25,6 +25,8 @@ struct placement_t {
 
   static placement_t make(partition_t const& partition, int num_partials);
 
+  placement_t construct_refinement(partition_t const& refine_with) const;
+
   vector<uint64_t> total_shape() const { return partition.total_shape(); }
 
   int num_partials() const;

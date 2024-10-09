@@ -206,3 +206,14 @@ int partition_t::index_to_block(vector<int> const& index) const {
   return idxs_to_index(block_shape(), index);
 }
 
+std::function<hrect_t<int>(vector<int> const&)>
+build_get_refi_index_region(
+  partition_t const& coarse_part,
+  partition_t const& refined_part)
+{
+  return [&](vector<int> const& coarse_bid) {
+    hrect_t<uint64_t> coarse_region = coarse_part.get_region(coarse_bid);
+    return refined_part.get_exact_covering_blocks(coarse_region);
+  };
+}
+

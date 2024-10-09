@@ -11,6 +11,33 @@ placement_t placement_t::make(partition_t const& partition, int num_partials)
   };
 }
 
+placement_t placement_t::construct_refinement(
+  partition_t const& other_part) const
+{
+  partition_t refi_part = partition_t::intersect(this->partition, other_part);
+
+  std::function<hrect_t<int>(vector<int> const&)> get_refi_index_region =
+    build_get_refi_index_region(this->partition, refi_part);
+
+  int num_ps = num_partials();
+  placement_t ret = placement_t::make(refi_part, num_ps);
+
+  vector<int> here_block_shape = this->partition.block_shape();
+  vector<int> here_bid(here_block_shape.size(), 0);
+  do {
+    hrect_t<int> refi_region = get_refi_index_region(here_bid);
+    for(int p = 0; p != num_ps; ++p) {
+      set<int> const& here_locs = this->get_locs(here_bid, p);
+      vector<int> refi_bid = vector_mapfst(refi_region);
+      do {
+        ret.get_locs(refi_bid, p) = here_locs;
+      } while(increment_idxs_region(refi_region, refi_bid));
+    }
+  } while(increment_idxs(here_block_shape, here_bid));
+
+  return ret;
+}
+
 int placement_t::num_partials() const {
   return _num_partials(
     partition.block_shape(), locations.get_shape(), "placement");
