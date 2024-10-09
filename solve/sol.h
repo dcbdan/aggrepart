@@ -55,7 +55,3 @@ private:
 };
 
 bool operator==(sol_t::info_t const& lhs, sol_t::info_t const& rhs);
-
-sol_t create_init_sol(
-  placement_t const& inn_pl,
-  placement_t const& out_pl);

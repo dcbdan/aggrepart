@@ -127,13 +127,38 @@ int graph_t::touch(
   return ret;
 }
 
+int graph_t::new_tensor_id() const {
+  int tid = 0;
+  if(tensors.size() > 0) {
+    auto iter = tensors.end();
+    iter--;
+    // the new tid is one larger than the largest element
+    tid = 1 + iter->first;
+  }
+  return tid;
+}
+
 int graph_t::alloc(int loc, vector<uint64_t> shape) {
-  return alloc_(loc, shape, tt_tmp);
+  int tid = new_tensor_id();
+  alloc(tid, loc, shape);
+  return tid;
+}
+
+void graph_t::alloc(int tid, int loc, vector<uint64_t> shape) {
+  return alloc_(tid, loc, shape, tt_tmp);
 }
 
 int graph_t::alloc_(int loc, vector<uint64_t> shape, tensor_type_t tt) {
-  tensors.emplace_back(loc, shape, tt);
-  return tensors.size() - 1;
+  int tid = new_tensor_id();
+  alloc_(tid, loc, shape, tt);
+  return tid;
+}
+
+void graph_t::alloc_(int tid, int loc, vector<uint64_t> shape, tensor_type_t tt) {
+  auto [_, did_insert] = tensors.insert({tid, tensor_t(loc, shape, tt)});
+  if(!did_insert) {
+    throw std::runtime_error("This tensor is already here!");
+  }
 }
 
 int graph_t::touch_unto(

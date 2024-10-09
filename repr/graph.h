@@ -68,7 +68,12 @@ struct graph_t {
 
   // Allocate a temporary tensor
   int alloc(int loc, vector<uint64_t> shape);
+  void alloc(int tensor_id, int loc, vector<uint64_t> shape);
+
   int alloc_(int loc, vector<uint64_t> shape, tensor_type_t type);
+  void alloc_(int tensor_id, int loc, vector<uint64_t> shape, tensor_type_t type);
+
+  int new_tensor_id() const;
 
   // Touch the output tensor with the corresponding input tensor.
   // If the tensors are not at the same location, insert alloc tensors,
@@ -79,5 +84,5 @@ struct graph_t {
     set<int> direct_deps = {});
 
   vector<node_t> nodes;
-  vector<tensor_t> tensors;
+  map<int, tensor_t> tensors;
 };
