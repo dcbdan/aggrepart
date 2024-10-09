@@ -22,6 +22,8 @@ struct partition_t {
 
   hrect_t<uint64_t>
   get_region(vector<int> const& idxs) const;
+  hrect_t<uint64_t>
+  get_region(int block) const;
 
   hrect_t<int>
   get_exact_covering_blocks(

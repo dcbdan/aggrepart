@@ -54,8 +54,6 @@ struct sol_t {
 
   bool is_set() const;
 
-private:
-
   vector<node_t> nodes;
 
   // elem -> locs

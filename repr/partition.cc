@@ -62,6 +62,11 @@ partition_t::get_region(vector<int> const& idxs) const
   return ret;
 }
 
+hrect_t<uint64_t>
+partition_t::get_region(int block) const {
+  return get_region(block_to_index(block));
+}
+
 hrect_t<int>
 partition_t::get_exact_covering_blocks(
   hrect_t<uint64_t> const& region) const

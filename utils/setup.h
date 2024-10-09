@@ -197,8 +197,13 @@ vector<T> vector_sorted_merges(vector<vector<T>> const& xs) {
 
 template <typename T>
 vector<T> vector_iota(int n) {
-  vector<T> ret(n);
-  std::iota(ret.begin(), ret.end(), T(0));
+  return vector_iota<T>(n, 0);
+}
+
+template <typename T>
+vector<T> vector_iota(int size, int start) {
+  vector<T> ret(size);
+  std::iota(ret.begin(), ret.end(), T(start));
   return ret;
 }
 

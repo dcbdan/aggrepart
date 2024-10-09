@@ -25,3 +25,12 @@ T hrect_size(hrect_t<T> const& hrect)
   return ret;
 }
 
+template <typename T>
+vector<T> hrect_shape(hrect_t<T> const& hrect) {
+  vector<T> ret;
+  ret.reserve(hrect.size());
+  for(auto const& [beg,end]: hrect) {
+    ret.push_back(end-beg);
+  }
+  return ret;
+}

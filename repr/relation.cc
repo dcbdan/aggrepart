@@ -25,3 +25,25 @@ int relation_t::num_partials() const {
     partition.block_shape(), locations.get_shape(), "relation");
 }
 
+vector<int> relation_t::elem_to_block(int elem) const {
+  vector<int> index = elem_to_index(elem);
+  return vector<int>(index.begin(), index.begin() + (index.size() - 1));
+}
+
+int relation_t::elem_to_partial(int elem) const {
+  vector<int> index = elem_to_index(elem);
+  return index.back();
+}
+
+vector<int> relation_t::elem_to_index(int elem) const {
+  return index_to_idxs(locations.get_shape(), elem);
+}
+
+int relation_t::index_to_elem(vector<int> const& index) const {
+  return idxs_to_index(locations.get_shape(), index);
+}
+
+hrect_t<uint64_t> relation_t::get_region(int elem) const {
+  return partition.get_region(elem_to_block(elem));
+}
+
