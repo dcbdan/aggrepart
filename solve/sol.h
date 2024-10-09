@@ -13,6 +13,21 @@ struct sol_t {
     }
   };
 
+  struct which_t {
+    int node_id;
+    int elem;
+    int loc;
+
+    bool is_input() const { return node_id < 0; }
+    bool is_node() const { return node_id >= 0; }
+
+    static which_t make_input(int elem, int loc)
+    { return which_t { -1, elem, loc }; }
+
+    static which_t make_node(int node_id)
+    { return which_t { node_id, 0, 0 }; }
+  };
+
   sol_t(
     vector<info_t> const& fini_state,
     map<int, set<int>> const& init_locs);
@@ -26,7 +41,7 @@ struct sol_t {
     // either this is empty and the node is unset
     // or the union of the inns equals the outs and
     // the node is set
-    vector<info_t> inns;
+    vector<which_t> inns; // node_ids
 
     bool is_set() const {
       return inns.size() > 0;
@@ -42,13 +57,15 @@ struct sol_t {
 private:
 
   vector<node_t> nodes;
+
+  // elem -> locs
   map<int, set<int>> const init_locs;
 
   int get_preferred_input_loc(int elem, int best_loc);
 
   // append an insert node if inn is not an input and the (elems,loc) of inn
   // are not available at or after start_id
-  void append(int start_id, info_t const& inn);
+  which_t append(int start_id, info_t const& inn);
 
   // return nodes.size() if not found!
   int find(int start_id, info_t const& info);

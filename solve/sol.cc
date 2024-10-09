@@ -17,14 +17,15 @@ void sol_t::naive(int which_node) {
   }
 
   for(int const& elem: node.elems()) {
-    node.inns.push_back(info_t::singleton(
-      elem,
-      get_preferred_input_loc(elem, node.loc())));
+    node.inns.push_back(
+      which_t::make_input(
+        elem,
+        get_preferred_input_loc(elem, node.loc())));
   }
 }
 
-void sol_t::split(int which_node, vector<sol_t::info_t> const& inns) {
-
+void sol_t::split(int which_node, vector<sol_t::info_t> const& inns)
+{
   node_t& node = nodes.at(which_node);
   if(node.is_set()) {
     throw std::runtime_error("split: this node is set!");
@@ -45,10 +46,10 @@ void sol_t::split(int which_node, vector<sol_t::info_t> const& inns) {
     }
   }
 
+  node.inns.reserve(inns.size());
   for(info_t const& inn: inns) {
-    append(which_node + 1, inn);
+    node.inns.push_back(append(which_node + 1, inn));
   }
-  node.inns = inns;
 }
 
 void sol_t::chain(int which_node, int inn_loc) {
@@ -69,7 +70,7 @@ void sol_t::chain(int which_node, int inn_loc) {
     throw std::runtime_error("tried to chain, but not already here; try split instead");
   }
 
-  node.inns.push_back(inn_info);
+  node.inns.push_back(which_t::make_node(inn_id));
 }
 
 bool sol_t::is_set() const {
@@ -81,23 +82,27 @@ bool sol_t::is_set() const {
   return true;
 }
 
-void sol_t::append(int start_id, sol_t::info_t const& inn) {
+sol_t::which_t sol_t::append(int start_id, sol_t::info_t const& inn) {
   if(inn.elems.size() == 1) {
     int const& elem = *inn.elems.begin();
     set<int> const& elem_init_locs = init_locs.at(elem);
     if(elem_init_locs.count(inn.loc) > 0) {
       // This is an input node and we already have this guy
-      return;
+      return which_t::make_input(elem, inn.loc);
     }
   }
 
-  if(find(start_id, inn) < nodes.size()) {
-    // We already have this inn
-    return;
+  {
+    int found_id = find(start_id, inn);
+    if(found_id < nodes.size()) {
+      // We already have this inn
+      return which_t::make_node(found_id);
+    }
   }
 
   // We need to solve for this inn
   nodes.push_back(node_t { .fini = inn, .inns = {} });
+  return which_t::make_node(nodes.size() - 1);
 }
 
 int sol_t::find(int start_id, sol_t::info_t const& info) {
