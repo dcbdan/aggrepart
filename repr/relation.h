@@ -9,6 +9,9 @@ struct relation_t {
   partition_t partition;
   vtensor_t<map<int, int>> locations;
 
+  // give tensor ids of 0,1,...
+  static relation_t make_from_placement(placement_t const& pl);
+
   int num_partials() const;
 
   bool has_partials() const { return num_partials() > 1; }

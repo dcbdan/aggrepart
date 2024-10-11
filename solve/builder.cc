@@ -1,7 +1,7 @@
 #include "builder.h"
 
 tuple<sol_t, builder_info_t, relation_t>
-create_init_sol(
+builder_init_sol(
   relation_t const& refi_rel,
   placement_t const& out_pl)
 {

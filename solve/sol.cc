@@ -133,6 +133,50 @@ int sol_t::get_preferred_input_loc(int elem, int best_loc) {
   return *locs.begin();
 }
 
+void solve_naive(sol_t& sol) {
+  // Note that sol.nodes grows!
+  for(int node_id = 0; node_id != sol.nodes.size(); ++node_id) {
+    sol.naive(node_id);
+  }
+}
+
+void sol_t::node_t::print(sol_t const& self, std::ostream& out) const {
+  if(is_set()) {
+    auto f = [&](int i) {
+      auto const& which = inns[i];
+      if(which.is_input()) {
+        out << "in(" << which.elem << ")@" << which.loc;
+      } else {
+        auto const& node = self.nodes[which.node_id];
+        out << node.elems() << "@" << node.loc();
+      }
+    };
+
+    out << "{";
+    f(0);
+    for(int i = 1; i != inns.size(); ++i) {
+      out << ", ";
+      f(i);
+    }
+    out << "}@" << loc();
+  } else {
+    out << elems() << "@" << loc();
+  }
+}
+
 bool operator==(sol_t::info_t const& lhs, sol_t::info_t const& rhs) {
   return lhs.loc == rhs.loc && set_equal(lhs.elems, rhs.elems);
+}
+
+std::ostream& operator<<(std::ostream& out, sol_t const& sol) {
+  if(sol.nodes.size() == 0) {
+    throw std::runtime_error("odd, sol is empty...");
+  }
+  out << "["; sol.nodes[0].print(sol, out);
+  for(int i = 1; i != sol.nodes.size(); ++i) {
+    out << ", "; sol.nodes[i].print(sol, out);
+  }
+  out << "]";
+
+  return out;
 }

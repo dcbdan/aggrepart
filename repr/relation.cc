@@ -1,5 +1,26 @@
 #include "relation.h"
 
+relation_t relation_t::make_from_placement(placement_t const& pl) {
+  relation_t ret {
+    .partition = pl.partition,
+    .locations = vtensor_t<map<int, int>>(pl.locations.get_shape())
+  };
+
+  int id = 0;
+  vector<set<int>> const& xss = pl.locations.get();
+  vector<map<int, int>>& yss = ret.locations.get();
+  for(int i = 0; i != xss.size(); ++i) {
+    set<int> const& xs = xss[i];
+    map<int, int>& ys = yss[i];
+    for(int const& x: xs) {
+      ys.insert({ x, id });
+      id++;
+    }
+  }
+
+  return ret;
+}
+
 placement_t relation_t::as_placement() const {
   vtensor_t<set<int>> locs(locations.get_shape());
 

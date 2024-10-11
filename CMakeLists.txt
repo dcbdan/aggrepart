@@ -24,3 +24,4 @@ target_link_libraries(${name} aggrepart)
 endfunction()
 
 add_experiment("e01_hello")
+add_experiment("e02_naive_solve_test")

@@ -46,6 +46,8 @@ struct sol_t {
     bool is_set() const {
       return inns.size() > 0;
     }
+
+    void print(sol_t const& self, std::ostream& out) const;
   };
 
   void naive(int which_node);
@@ -69,4 +71,8 @@ struct sol_t {
   int find(int start_id, info_t const& info);
 };
 
+void solve_naive(sol_t& sol);
+
 bool operator==(sol_t::info_t const& lhs, sol_t::info_t const& rhs);
+
+std::ostream& operator<<(std::ostream& out, sol_t const& sol);

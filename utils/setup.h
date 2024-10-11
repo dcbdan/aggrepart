@@ -141,7 +141,7 @@ template <typename T>
 void print_set(std::ostream& out, set<T> const& xs)
 {
   auto iter = xs.begin();
-  out << "s{";
+  out << "{";
   if(xs.size() >= 1) {
     out << (*iter++);
   }
@@ -352,6 +352,11 @@ template <typename T>
 template <typename T>
 void set_union_into(set<T>& ret, set<T> const& xs) {
   set_append(ret, xs);
+}
+
+template <typename T>
+set<T> set_from_vector(vector<T> const& xs) {
+  return set<T>(xs.begin(), xs.end());
 }
 
 template <typename T>
