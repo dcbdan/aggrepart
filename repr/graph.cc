@@ -138,6 +138,46 @@ int graph_t::new_tensor_id() const {
   return tid;
 }
 
+void graph_t::print_graphviz(std::ostream& out) const {
+  using std::endl;
+  string tab = "  ";
+  out << "digraph {" << endl;
+  for(int id = 0; id != nodes.size(); ++id) {
+    node_t const& node = nodes[id];
+
+    string label;
+    string color = "";
+
+    if(node.is_touch()) {
+      label += "touch:";
+    } else if(node.is_move()) {
+      label += "move(";
+      auto const& m = node.get_move();
+      label += "loc" + write_with_ss(m.src_loc) + "->";
+      label += "loc" + write_with_ss(m.dst_loc);
+      label += "):";
+    } else {
+      throw std::runtime_error("should not happen: missing node case");
+    }
+    label += "tid" + write_with_ss(node.inn_tensor_id);
+    label += "->";
+    label += "tid" + write_with_ss(node.out_tensor_id);
+
+    out << tab
+      << "n" << id
+      << " [style=filled,label=\"" << label << "\"";
+    if(color != "") {
+      out << ",color=\"" << color << "\"";
+    }
+    out << "]" << endl;
+
+    for(int const& inn: node.deps) {
+      out << tab << "n" << inn << " -> " << "n" << id << endl;
+    }
+  }
+  out << "}" << endl;
+}
+
 int graph_t::alloc(int loc, vector<uint64_t> shape) {
   int tid = new_tensor_id();
   alloc(tid, loc, shape);

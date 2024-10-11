@@ -50,6 +50,12 @@ struct graph_t {
     int inn_tensor_id;
     int out_tensor_id;
 
+    bool is_touch() const { return std::holds_alternative<touch_t>(op); }
+    bool is_move()  const { return std::holds_alternative<move_t>(op);  }
+
+    touch_t const& get_touch() const { return std::get<touch_t>(op); }
+    move_t  const& get_move()  const { return std::get<move_t>(op);  }
+
     set<int> deps;
   };
 
@@ -74,6 +80,8 @@ struct graph_t {
   void alloc_(int tensor_id, int loc, vector<uint64_t> shape, tensor_type_t type);
 
   int new_tensor_id() const;
+
+  void print_graphviz(std::ostream& out) const;
 
   // Touch the output tensor with the corresponding input tensor.
   // If the tensors are not at the same location, insert alloc tensors,
