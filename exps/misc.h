@@ -32,7 +32,7 @@ make_pls_matrix_all_reduce(
 // | 0 1 | 2 3 |    |        @0,1|
 // |-----------| -> |------------|
 // | c,g | d,h |    | c,g,d,h    |
-// | 0 1 | 2 3 |    |        @0,1|
+// | 0 1 | 2 3 |    |        @2,3|
 // ------------     -------------
 //
 // Here, the init relation is replicated
@@ -67,8 +67,8 @@ make_pls_canonical_4locs_rows_to_cols(
   placement_t fini = placement_t::make(part_fini, 1);
   fini.get_locs({ 0, 0 }, 0).insert(0);
   fini.get_locs({ 0, 0 }, 0).insert(1);
-  fini.get_locs({ 1, 0 }, 0).insert(0);
-  fini.get_locs({ 1, 0 }, 0).insert(1);
+  fini.get_locs({ 1, 0 }, 0).insert(2);
+  fini.get_locs({ 1, 0 }, 0).insert(3);
 
   return { init, fini };
 }

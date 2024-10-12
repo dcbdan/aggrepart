@@ -34,6 +34,19 @@ scalar_t scalar_t::make_zero(castable_t castable, dtype_t dtype) {
   throw std::runtime_error("missing castable case");
 }
 
+scalar_t scalar_t::make_one(dtype_t dtype) {
+  scalar_t ret { .dtype = dtype };
+  if(dtype == dtype_t::f32) {
+    ret.as_f32() = 1.0;
+  } else if(dtype == dtype_t::f64) {
+    ret.as_f64() = 1.0;
+  } else {
+    throw std::runtime_error("missing dtype case");
+  }
+
+  return ret;
+}
+
 double _f64_inf() {
   static_assert(std::numeric_limits<double>::is_iec559, "for inf");
   return std::numeric_limits<double>::infinity();

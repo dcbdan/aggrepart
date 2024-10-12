@@ -21,10 +21,12 @@ struct scalar_t {
   uint8_t data[_scalar_data_size];
 
   static scalar_t make_zero(dtype_t dtype);
+  static scalar_t make_one(dtype_t dtype);
   static scalar_t make_inf(dtype_t dtype);
   static scalar_t make_negative_inf(dtype_t dtype);
 
   static scalar_t make_zero(castable_t castable, dtype_t dtype);
+
 
   float&  as_f32() { return *reinterpret_cast<float*>(data);  }
   double& as_f64() { return *reinterpret_cast<double*>(data); }

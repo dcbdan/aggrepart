@@ -22,7 +22,7 @@ struct graph_t {
 
     int loc() const { return _loc; }
 
-    vector<uint64_t> const& shape() { return _shape; }
+    vector<uint64_t> const& shape() const { return _shape; }
     int rank() const { return _shape.size(); }
 
     tensor_type_t type() const { return _type; }
@@ -77,6 +77,7 @@ struct graph_t {
     fill_t  const& get_fill()  const { return std::get<fill_t>(op);  }
 
     set<int> deps;
+    set<int> outs;
   };
 
   void _verify_deps(set<int> const& deps);
@@ -101,7 +102,17 @@ struct graph_t {
 
   int new_tensor_id() const;
 
+  int num_locations() const;
+
   void print_graphviz(std::ostream& out) const;
+
+  int tensor_loc(int tensor_id) const { return tensors.at(tensor_id).loc(); }
+
+  int insert_node(
+    std::variant<touch_t, move_t, fill_t> op,
+    int inn_tensor_id,
+    int out_tensor_id,
+    set<int> const& deps);
 
   // Touch the output tensor with the corresponding input tensor.
   // If the tensors are not at the same location, insert alloc tensors,

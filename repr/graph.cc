@@ -83,14 +83,7 @@ int graph_t::move(int src_tensor_id, int dst_tensor_id, set<int> deps) {
     .size = product(src.shape())
   };
 
-  nodes.push_back(node_t {
-    .op = move,
-    .inn_tensor_id = src_tensor_id,
-    .out_tensor_id = dst_tensor_id,
-    .deps = deps
-  });
-
-  int ret = nodes.size() - 1;
+  int ret = insert_node(move, src_tensor_id, dst_tensor_id, deps);
 
   _mark_write(ret, src, dst);
 
@@ -121,11 +114,7 @@ int graph_t::touch(
       .scalar = scalar_t::make_zero(castable.value(), dtype),
       .elem = product(out.shape())
     };
-    nodes.push_back(node_t {
-      .op = fill,
-      .out_tensor_id = out_tensor_id
-    });
-    int fill_gid = nodes.size() - 1;
+    int fill_gid = insert_node(fill, 0, out_tensor_id, set<int>{});
 
     out.insert_init(fill_gid);
   }
@@ -151,14 +140,7 @@ int graph_t::touch(
 
   _verify_deps(deps);
 
-  nodes.push_back(node_t {
-    .op = op,
-    .inn_tensor_id = inn_tensor_id,
-    .out_tensor_id = out_tensor_id,
-    .deps = deps
-  });
-
-  int ret = nodes.size() - 1;
+  int ret = insert_node(op, inn_tensor_id, out_tensor_id, deps);
 
   _mark_write(ret, inn, out);
 
@@ -174,6 +156,35 @@ int graph_t::new_tensor_id() const {
     tid = 1 + iter->first;
   }
   return tid;
+}
+
+int graph_t::num_locations() const {
+  int ret = 0;
+  for(auto const& [_, tensor]: tensors) {
+    ret = std::max(ret, tensor.loc());
+  }
+
+  return ret + 1;
+}
+
+int graph_t::insert_node(
+  std::variant<touch_t, move_t, fill_t> op,
+  int inn_tensor_id,
+  int out_tensor_id,
+  set<int> const& deps)
+{
+  nodes.push_back(node_t {
+    .op = op,
+    .inn_tensor_id = inn_tensor_id,
+    .out_tensor_id = out_tensor_id,
+    .deps = deps });
+  int ret = nodes.size() - 1;
+
+  for(int const& dep: deps) {
+    nodes.at(dep).outs.insert(ret);
+  }
+
+  return ret;
 }
 
 void graph_t::print_graphviz(std::ostream& out) const {
