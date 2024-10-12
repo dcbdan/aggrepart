@@ -45,4 +45,18 @@ interval_intersect(
   }
 }
 
+bool hrect_has_intersect(
+  hrect_t<uint64_t> const& lhs,
+  hrect_t<uint64_t> const& rhs)
+{
+  if(lhs.size() != rhs.size()) {
+    throw std::runtime_error("hrect_has_intersect: incorrect sizes");
+  }
+  for(int i = 0; i != lhs.size(); ++i) {
+    if(!interval_intersect(lhs[i], rhs[i])) {
+      return false;
+    }
+  }
+  return true;
+}
 

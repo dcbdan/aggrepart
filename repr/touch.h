@@ -2,11 +2,7 @@
 #include "../utils/setup.h"
 #include "../utils/hrect.h"
 
-enum class castable_t {
-  add,
-  min,
-  max
-};
+#include "../repr/scalar.h"
 
 struct touch_t {
   struct dim_t {
@@ -18,7 +14,8 @@ struct touch_t {
   };
 
   vector<dim_t> dims;
-  optional<castable_t> op;
+  optional<castable_t> castable;
+  dtype_t dtype;
 
   vector<uint64_t> write_shape() const {
     return vector_from_each_member(dims, uint64_t, size); }
@@ -38,7 +35,8 @@ struct touch_t {
   static touch_t intersect(
     hrect_t<uint64_t> inn_region,
     hrect_t<uint64_t> out_region,
-    optional<castable_t> op);
+    optional<castable_t> castable,
+    dtype_t dtype);
 };
 
 

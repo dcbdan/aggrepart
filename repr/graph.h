@@ -2,8 +2,13 @@
 #include "../utils/setup.h"
 
 #include "touch.h"
+#include "scalar.h"
 
 struct graph_t {
+  graph_t(
+    dtype_t d = dtype_t::f32,
+    optional<castable_t> c = std::nullopt);
+
   enum tensor_type_t {
     tt_inn,
     tt_out,
@@ -22,13 +27,19 @@ struct graph_t {
 
     tensor_type_t type() const { return _type; }
 
-    void write_with();
+    void write_with(); // aka: do_a_read_of_this_tensor
 
     void insert_write(int gid);
+
+    void insert_init(int gid);
 
     bool is_read_only() const { return read_only; }
 
     set<int> writes() const { return _writes; }
+
+    set<int> inits() const { return _inits; }
+
+    bool has_init() const { return inits().size() > 0; }
   private:
     int _loc;
     vector<uint64_t> _shape;
@@ -37,6 +48,8 @@ struct graph_t {
 
     // all graph ids that have writen to this tensor
     set<int> _writes;
+    set<int> _inits;
+    // all graph ids that initialize this tensor
   };
 
   struct move_t {
@@ -45,16 +58,23 @@ struct graph_t {
     uint64_t size;
   };
 
+  struct fill_t {
+    scalar_t scalar;
+    uint64_t elem;
+  };
+
   struct node_t {
-    std::variant<touch_t, move_t> op;
-    int inn_tensor_id;
+    std::variant<touch_t, move_t, fill_t> op;
+    int inn_tensor_id; // note used when fill_t
     int out_tensor_id;
 
     bool is_touch() const { return std::holds_alternative<touch_t>(op); }
     bool is_move()  const { return std::holds_alternative<move_t>(op);  }
+    bool is_fill()  const { return std::holds_alternative<fill_t>(op);  }
 
     touch_t const& get_touch() const { return std::get<touch_t>(op); }
     move_t  const& get_move()  const { return std::get<move_t>(op);  }
+    fill_t  const& get_fill()  const { return std::get<fill_t>(op);  }
 
     set<int> deps;
   };
@@ -90,6 +110,12 @@ struct graph_t {
     touch_t const& op,
     int inn_tensor_id, int out_tensor_id,
     set<int> direct_deps = {});
+
+  // all tensors an ops are with respect to this dtype
+  dtype_t const dtype;
+  // all touches, if they have a castable, should be with this
+  // castable
+  optional<castable_t> const castable;
 
   vector<node_t> nodes;
   map<int, tensor_t> tensors;

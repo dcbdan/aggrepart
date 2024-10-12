@@ -15,6 +15,10 @@ interval_intersect(
   tuple<uint64_t, uint64_t> const& lhs,
   tuple<uint64_t, uint64_t> const& rhs);
 
+bool hrect_has_intersect(
+  hrect_t<uint64_t> const& lhs,
+  hrect_t<uint64_t> const& rhs);
+
 template <typename T>
 T hrect_size(hrect_t<T> const& hrect)
 {

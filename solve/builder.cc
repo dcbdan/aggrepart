@@ -116,7 +116,9 @@ builder_init_sol(
 
 graph_t builder_create_graph(
   sol_t const& sol,
-  builder_info_t const& info)
+  builder_info_t const& info,
+  dtype_t dtype,
+  optional<castable_t> maybe_castable)
 {
   if(!sol.is_set()) {
     throw std::runtime_error("expect set sol; did you forget to solve the sol?");
@@ -124,7 +126,7 @@ graph_t builder_create_graph(
 
   relation_t const& refi_rel = info.refi_rel;
 
-  graph_t ret;
+  graph_t ret(dtype, maybe_castable);
   {
     // insert the refi_rel into the graph
     vector<map<int, int>> const& refi_rel_locs = refi_rel.locations.get();
@@ -138,14 +140,18 @@ graph_t builder_create_graph(
     }
   }
 
-  auto get_set_hrect = [&](set<int> const& elems) {
-    auto iter = elems.begin();
+  auto get_set_hrect_and_is_overlapping = [&](set<int> const& elems)
+    -> tuple<hrect_t<uint64_t>, bool>
+  {
+    vector<hrect_t<uint64_t>> hrects;
+    hrects.reserve(elems.size());
+    for(int const& elem: elems) {
+      hrects.push_back(refi_rel.get_region(elem));
+    }
 
-    hrect_t<uint64_t> ret = refi_rel.get_region(*iter);
-    iter++;
-
-    for(; iter != elems.end(); ++iter) {
-      hrect_t<uint64_t> const eh = refi_rel.get_region(*iter);
+    hrect_t<uint64_t> ret = hrects[0];
+    for(int h = 1; h != hrects.size(); ++h) {
+      hrect_t<uint64_t> const& eh = hrects[h];
       for(int i = 0; i != eh.size(); ++i) {
         auto& [b, e] = ret[i];
         auto const& [bb, ee] = eh[i];
@@ -154,7 +160,14 @@ graph_t builder_create_graph(
       }
     }
 
-    return ret;
+    for(int i = 0; i != hrects.size()-1; ++i) {
+      for(int j = i+1; j != hrects.size(); ++j) {
+        if(hrect_has_intersect(hrects[i], hrects[j])) {
+          return { ret, true };
+        }
+      }
+    }
+    return { ret, false };
   };
 
   int _next_tid = info.out_tids.back() + 1;
@@ -176,10 +189,15 @@ graph_t builder_create_graph(
   //   Note: the first builder_info.out_tids.size() are tt_out (!)
   for(int node_id = sol.nodes.size() - 1; node_id >= 0; node_id--) {
     auto node = sol.nodes[node_id];
-    // 0. get the hrect of the node
-    hrect_t<uint64_t> out_region = get_set_hrect(node.elems());
+    // 0. get the hrect of the node and determine if these
+    //    touches are copies or updates
+    auto [out_region, requires_castable] =
+      get_set_hrect_and_is_overlapping(node.elems());
+    if(requires_castable && !bool(maybe_castable)) {
+      throw std::runtime_error("requires a castable but none provided!");
+    }
 
-    // 1. allocate this tensor
+    // 2. allocate this tensor
     int out_tensor_id;
     {
       vector<uint64_t> shape = hrect_shape(out_region);
@@ -200,7 +218,7 @@ graph_t builder_create_graph(
     node_to_tensor[node_id] = out_tensor_id;
     node_regions[node_id] = out_region;
 
-    // 2. for each node, touch unto this guy
+    // 3. for each node, touch unto this guy
     for(sol_t::which_t const& which: node.inns) {
       int inn_tensor_id;
       hrect_t<uint64_t> inn_region;
@@ -212,8 +230,14 @@ graph_t builder_create_graph(
         inn_region = node_regions.at(which.node_id);
       }
 
-      // TODO: Should pass in a type of castable?
-      touch_t touch = touch_t::intersect(inn_region, out_region, castable_t::add);
+      touch_t touch = touch_t::intersect(inn_region, out_region, std::nullopt, dtype);
+
+      // Only add the castable when it is actually needed. This way,
+      // the output tensor will only be initialized when needed
+      if(requires_castable) {
+        touch.castable = maybe_castable;
+      }
+
       ret.touch_unto(touch, inn_tensor_id, out_tensor_id);
     }
   }

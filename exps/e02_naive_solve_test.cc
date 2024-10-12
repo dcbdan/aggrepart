@@ -11,6 +11,9 @@
 #include "misc.h"
 
 int main(int argc, char** argv) {
+  dtype_t dtype = dtype_t::f32;
+  castable_t castable = castable_t::add;
+
   args_t args(argc, argv);
   args.set_default<bool>("canonical", true);
   args.set_default<uint64_t>("nrow", 10000);
@@ -36,7 +39,7 @@ int main(int argc, char** argv) {
 
   DOUT(sol);
 
-  graph_t graph = builder_create_graph(sol, builder_info);
+  graph_t graph = builder_create_graph(sol, builder_info, dtype, castable);
 
   std::ofstream f("g.gv");
   graph.print_graphviz(f);

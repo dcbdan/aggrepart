@@ -36,5 +36,7 @@ builder_init_sol(
   placement_t const& out_pl);
 graph_t builder_create_graph(
   sol_t const& solved_sol,
-  builder_info_t const& builder_info);
+  builder_info_t const& builder_info,
+  dtype_t dtype,
+  optional<castable_t> maybe_castable);
 

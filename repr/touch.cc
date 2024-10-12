@@ -11,7 +11,7 @@ touch_t touch_t::inn_to_write() const {
       .size       = x.size
     });
   }
-  return touch_t { .dims = ds, .op = op };
+  return touch_t { .dims = ds, .castable = castable };
 }
 
 touch_t touch_t::write_to_out() const {
@@ -25,11 +25,11 @@ touch_t touch_t::write_to_out() const {
       .size       = x.size
     });
   }
-  return touch_t { .dims = ds, .op = op };
+  return touch_t { .dims = ds, .castable = castable };
 }
 
 bool touch_t::is_identity() const {
-  if(bool(op)) {
+  if(bool(castable)) {
     return false;
   }
 
@@ -49,7 +49,8 @@ bool touch_t::is_identity() const {
 touch_t touch_t::intersect(
   hrect_t<uint64_t> inn_region,
   hrect_t<uint64_t> out_region,
-  optional<castable_t> op)
+  optional<castable_t> castable,
+  dtype_t dtype)
 {
   if(inn_region.size() != out_region.size()) {
     throw std::runtime_error("invalid touch intersect args");
@@ -74,7 +75,8 @@ touch_t touch_t::intersect(
 
   return touch_t {
     .dims = dims,
-    .op = op
+    .castable = castable,
+    .dtype = dtype
   };
 }
 

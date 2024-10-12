@@ -1,10 +1,16 @@
 #include "graph.h"
 
+graph_t::graph_t(dtype_t d, optional<castable_t> c)
+  : dtype(d), castable(c)
+{}
+
 graph_t::tensor_t::tensor_t()
   : tensor_t(-1, {}, tt_tmp)
 {}
 
-graph_t::tensor_t::tensor_t(int l, vector<uint64_t> s, graph_t::tensor_type_t t)
+graph_t::tensor_t::tensor_t(
+  int l, vector<uint64_t> s,
+  graph_t::tensor_type_t t)
   : _loc(l), _shape(s), _type(t), read_only(false)
 {
   if(_type == tt_inn) {
@@ -17,6 +23,16 @@ void graph_t::tensor_t::insert_write(int gid) {
     throw std::runtime_error("cannot write to read only tensor");
   }
   _writes.insert(gid);
+}
+
+void graph_t::tensor_t::insert_init(int gid) {
+  if(read_only) {
+    throw std::runtime_error("cannot init read only tensor");
+  }
+  if(_writes.size() > 0) {
+    throw std::runtime_error("cannot init tensor that has been written to");
+  }
+  _inits.insert(gid);
 }
 
 void graph_t::tensor_t::write_with() {
@@ -89,10 +105,32 @@ int graph_t::touch(
   if(inn_tensor_id == out_tensor_id) {
     throw std::runtime_error("out cannot be in for touch op");
   }
+  if(castable != op.castable) {
+    throw std::runtime_error("touch has differing castable");
+  }
 
   tensor_t & inn = tensors.at(inn_tensor_id);
   tensor_t & out = tensors.at(out_tensor_id);
 
+  // Since we are doing a touches onto this tensor, we have to make
+  // sure that the output data is zero (zero according to the castable)
+  // initialized before any touch actually occurs
+  if(bool(castable) && !out.has_init()) {
+    // ok, we must zero initialize th
+    fill_t fill {
+      .scalar = scalar_t::make_zero(castable.value(), dtype),
+      .elem = product(out.shape())
+    };
+    nodes.push_back(node_t {
+      .op = fill,
+      .out_tensor_id = out_tensor_id
+    });
+    int fill_gid = nodes.size() - 1;
+
+    out.insert_init(fill_gid);
+  }
+
+  set_append(deps, out.inits());
   set_append(deps, inn.writes());
 
   if(out.is_read_only()) {
@@ -156,6 +194,8 @@ void graph_t::print_graphviz(std::ostream& out) const {
       label += "loc" + write_with_ss(m.src_loc) + "->";
       label += "loc" + write_with_ss(m.dst_loc);
       label += "):";
+    } else if(node.is_fill()) {
+      label += "fill:";
     } else {
       throw std::runtime_error("should not happen: missing node case");
     }

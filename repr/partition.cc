@@ -147,7 +147,7 @@ partition_t::subset_covering_block(hrect_t<uint64_t> const& region) const
 
   touch_t op {
     .dims = dims,
-    .op = std::nullopt
+    .castable = std::nullopt
   };
 
   return {idx, op};
@@ -185,7 +185,7 @@ touch_from_covered_region(
 
   touch_t op {
     .dims = dims,
-    .op = std::nullopt
+    .castable = std::nullopt
   };
 
   return {inn_idx, out_idx, op};
