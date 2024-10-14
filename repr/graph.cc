@@ -80,7 +80,7 @@ int graph_t::move(int src_tensor_id, int dst_tensor_id, set<int> deps) {
   move_t move {
     .src_loc = src.loc(),
     .dst_loc = dst.loc(),
-    .size = product(src.shape())
+    .elem = product(src.shape())
   };
 
   int ret = insert_node(move, src_tensor_id, dst_tensor_id, deps);
@@ -109,7 +109,7 @@ int graph_t::touch(
   // sure that the output data is zero (zero according to the castable)
   // initialized before any touch actually occurs
   if(bool(castable) && !out.has_init()) {
-    // ok, we must zero initialize th
+    // ok, we must zero initialize
     fill_t fill {
       .scalar = scalar_t::make_zero(castable.value(), dtype),
       .elem = product(out.shape())
@@ -229,6 +229,16 @@ void graph_t::print_graphviz(std::ostream& out) const {
   out << "}" << endl;
 }
 
+set<int> graph_t::out_tensors() const {
+  set<int> ret;
+  for(auto const&  [tid, tensor]: tensors) {
+    if(tensor.type() == tt_out) {
+      ret.insert(tid);
+    }
+  }
+  return ret;
+}
+
 int graph_t::alloc(int loc, vector<uint64_t> shape) {
   int tid = new_tensor_id();
   alloc(tid, loc, shape);
@@ -288,9 +298,13 @@ int graph_t::touch_unto(
   }
 
   int move_dst_tensor = out_tensor_id;
-  if(!op.uses_full_out()) {
-    // allocate temporary memory for moving into
+  bool do_touch_output = !(op.uses_full_out() && op.castable == std::nullopt);
+  if(do_touch_output) {
+    // We need to move into temporary memory
     move_dst_tensor = alloc(out.loc(), op.write_shape());
+  } else {
+    // In this case, this tensor is being directly copied
+    // into the output tensor
   }
 
   // do the move
@@ -299,8 +313,8 @@ int graph_t::touch_unto(
     curr_deps = set<int>{x};
   }
 
-  if(!op.uses_full_out()) {
-    // touch into the output (if needed)
+  if(do_touch_output) {
+    // touch into the output 
     int x = touch(
       op.write_to_out(),
       move_dst_tensor, out_tensor_id,
@@ -310,4 +324,19 @@ int graph_t::touch_unto(
 
   int ret = *curr_deps.begin();
   return ret;
+}
+
+std::ostream& operator<<(std::ostream& out, graph_t::tensor_type_t const& tt)
+{
+  if(tt == graph_t::tt_inn) {
+    out << "tt_inn";
+  } else if(tt == graph_t::tt_tmp) {
+    out << "tt_tmp";
+  } else if(tt == graph_t::tt_out) {
+    out << "tt_out";
+  } else {
+    throw std::runtime_error("missing graph tensor type in operator<<");
+  }
+
+  return out;
 }

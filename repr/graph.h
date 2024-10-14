@@ -55,7 +55,7 @@ struct graph_t {
   struct move_t {
     int src_loc;
     int dst_loc;
-    uint64_t size;
+    uint64_t elem; 
   };
 
   struct fill_t {
@@ -108,6 +108,8 @@ struct graph_t {
 
   int tensor_loc(int tensor_id) const { return tensors.at(tensor_id).loc(); }
 
+  set<int> out_tensors() const;
+
   int insert_node(
     std::variant<touch_t, move_t, fill_t> op,
     int inn_tensor_id,
@@ -131,3 +133,5 @@ struct graph_t {
   vector<node_t> nodes;
   map<int, tensor_t> tensors;
 };
+
+std::ostream& operator<<(std::ostream& out, graph_t::tensor_type_t const& tt);

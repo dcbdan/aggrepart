@@ -5,6 +5,10 @@
 
 #include "wrap_cuda.h"
 
+#ifdef USE_CUDA_PROFILE
+#include <cuda_profiler_api.h>
+#endif
+
 // Each completed node has a stream and/or an event.
 // If you depend on a node that has a stream, you can own that straem.
 // Otherwise you must depend on it's event
@@ -159,7 +163,7 @@ struct run_state_t {
     } else if(node.is_move()) {
       _cuda_move(
         stream,
-        node.get_move().size,
+        dtype_size(graph.dtype) * node.get_move().elem,
         get_data(node.out_tensor_id),
         get_data(node.inn_tensor_id));
     } else if(node.is_fill()) {
@@ -218,6 +222,10 @@ void run_graph(
   graph_t const& graph,
   map<int, mem_t> const& mems)
 {
+#ifdef USE_CUDA_PROFILE
+  _cuda_handle_error(cudaProfilerStart());
+#endif
+
   // Make sure each tensor in the graph is in mems, at the right place,
   // with the enough size
   for(auto const& [tid, tensor]: graph.tensors) {
@@ -237,4 +245,8 @@ void run_graph(
 
   run_state_t state(graph, mems);
   state.run();
+
+#ifdef USE_CUDA_PROFILE
+  _cuda_handle_error(cudaProfilerStop());
+#endif
 }

@@ -32,6 +32,10 @@ if(${ENGINE})
   find_package(CUDA 12.6 REQUIRED)
   include_directories("${CUDA_INCLUDE_DIRS}")
 
+  if(${PROFILE})
+    add_compile_definitions(USE_CUDA_PROFILE)
+  endif()
+
   include(FindCUDA/select_compute_arch)
   CUDA_DETECT_INSTALLED_GPUS(INSTALLED_GPU_CCS_1)
   string(STRIP "${INSTALLED_GPU_CCS_1}" INSTALLED_GPU_CCS_2)
