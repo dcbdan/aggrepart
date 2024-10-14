@@ -44,4 +44,14 @@ vector<uint64_t> divide_evenly(int num_parts, uint64_t n) {
   return ret;
 }
 
+void* increment_void_ptr(void* ptr, uint64_t size)
+{
+  return static_cast<void*>(
+    static_cast<uint8_t*>(ptr) + size);
+}
 
+void const* increment_void_ptr(void const* ptr, uint64_t size)
+{
+  return static_cast<void const*>(
+    static_cast<uint8_t const*>(ptr) + size);
+}

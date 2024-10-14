@@ -9,44 +9,21 @@
 #include "../solve/builder.h"
 
 #include "misc.h"
+#include "server.h"
 
 #include "../engine/run.h"
 #include "../engine/wrap_cuda.h"
 #include "../engine/fill.h"
 
-map<int, mem_t> init_data(graph_t const& graph) {
-  map<int, mem_t> ret;
+void init_data(server_t& server, graph_t const& graph) {
   for(auto const& [tid, tensor]: graph.tensors) {
-    uint64_t size = product(tensor.shape())*dtype_size(graph.dtype);
-
     int device = tensor.loc();
-    _cuda_set_device(device);
-    void* data = _cuda_malloc(size);
+    uint64_t size = product(tensor.shape())*dtype_size(graph.dtype);
+    server.allocate(tid, device, size);
 
-    ret.insert({ tid, mem_t{ .data = data, .size = size, .gpu = device } });
-  }
-
-  return ret;
-}
-
-void fill_inns(graph_t const& graph, map<int, mem_t> const& tensor_data) {
-  dtype_t dtype = dtype_t::f32;
-  for(auto const& [tid, mem]: tensor_data) {
-    auto const& tensor = graph.tensors.at(tid);
     if(tensor.type() == graph_t::tt_inn) {
-      auto const& [data, size, device] = mem;
-      uint64_t nelem = size / dtype_size(dtype);
-      _cuda_set_device(device);
-      execute_fill(0, scalar_t::make_one(dtype), nelem, data);
+      server.fill(tid, scalar_t::make_one(graph.dtype));
     }
-  }
-}
-
-void deinit_data(map<int, mem_t> const& data) {
-  for(auto const& [_, mem]: data) {
-    auto const& [data, size, device] = mem;
-    _cuda_set_device(device);
-    _cuda_free(data);
   }
 }
 
@@ -65,7 +42,7 @@ tensor_ranges(graph_t const& graph, map<int, mem_t> const& gpu_data)
     uint64_t nelem = product(tensor.shape());
 
     cpu_data.resize(nelem);
-    _cuda_set_device(mem.gpu);
+    _cuda_set_device(mem.device);
     _cuda_handle_error(cudaMemcpy(
       cpu_data.data(), mem.data, mem.size, 
       cudaMemcpyDeviceToHost));
@@ -95,10 +72,14 @@ int main(int argc, char** argv) {
   args.set_default<uint64_t>("ncol", 10000);
   args.set_default<int>("nlocs", 4);
 
+  uint64_t GB = 1000lu * 1000lu * 1000lu;
+  args.set_default<uint64_t>("memsize", 10*GB);
+
   bool canonical = args.get<bool>("canonical");
   uint64_t nrow = args.get<uint64_t>("nrow");
   uint64_t ncol = args.get<uint64_t>("ncol");
   int nlocs = args.get<int>("nlocs");
+  uint64_t memsize = args.get<uint64_t>("memsize");
 
   if(canonical && nlocs != 4) {
     throw std::runtime_error("cononical requires nlocs to be 4");
@@ -108,8 +89,6 @@ int main(int argc, char** argv) {
     canonical
     ? make_pls_canonical_4locs_rows_to_cols(nrow, ncol)
     : make_pls_matrix_all_reduce(nrow, ncol, nlocs);
-
-  _cuda_enable_peer_access();
 
   relation_t init_rel = relation_t::make_from_placement(init_pl);
 
@@ -122,29 +101,28 @@ int main(int argc, char** argv) {
   DOUT(sol);
 
   graph_t graph = builder_create_graph(sol, builder_info, dtype, castable);
+  if(graph.num_locations() > nlocs) {
+    throw std::runtime_error("graph is using more locations than available");
+  }
 
-  int num_gpus = graph.num_locations();
+  server_t server(memsize, nlocs);
 
   std::ofstream f("g.gv");
   graph.print_graphviz(f);
   DOUT("printed g.gv");
 
-  map<int, mem_t> data = init_data(graph);
+  init_data(server, graph);
 
-  fill_inns(graph, data);
-  
-  _cuda_sync_all(num_gpus);
+  _cuda_sync_all(nlocs);
   {
     gremlin_t gremlin("Run Graph");
-    run_graph(graph, data);
-    _cuda_sync_all(num_gpus);
+    run_graph(graph, server.data);
+    _cuda_sync_all(nlocs);
   }
 
-  for(auto const& [tid, vv]: tensor_ranges(graph, data)) {
+  for(auto const& [tid, vv]: tensor_ranges(graph, server.data)) {
     auto const& tensor = graph.tensors.at(tid);
     auto const& [mn,mx] = vv;
     DOUT(tid << ": " << tensor.type() << ", range (" << mn << ", " << mx << ")");
   }
-
-  deinit_data(data);
 }

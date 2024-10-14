@@ -443,4 +443,5 @@ Iter binary_search_find(Iter beg, Iter end, F evaluate)
   }
 }
 
-
+void* increment_void_ptr(void* ptr, uint64_t size);
+void const* increment_void_ptr(void const* ptr, uint64_t size);

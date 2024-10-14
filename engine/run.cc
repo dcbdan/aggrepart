@@ -235,8 +235,8 @@ void run_graph(
     }
     mem_t const& mem = iter->second;
 
-    if(mem.gpu != tensor.loc()) {
-      throw std::runtime_error("tensor loc != mem gpu");
+    if(mem.device != tensor.loc()) {
+      throw std::runtime_error("tensor loc != mem device");
     }
     if(mem.size < product(tensor.shape())*sizeof(float)) {
       throw std::runtime_error("memory size not large enough");

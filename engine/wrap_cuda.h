@@ -33,4 +33,4 @@ void _cuda_device_sync();
 void _cuda_sync_all(int num_devices);
 
 // return the number of devices peer access enabled for
-int _cuda_enable_peer_access();
+int _cuda_enable_peer_access(int num_devices = 0);

@@ -71,10 +71,12 @@ void _cuda_sync_all(int num_devices) {
   }
 }
 
-int _cuda_enable_peer_access()
+int _cuda_enable_peer_access(int device_count)
 {
-  int device_count;
-  _cuda_handle_error(cudaGetDeviceCount(&device_count));
+  if(device_count == 0) {
+    _cuda_handle_error(cudaGetDeviceCount(&device_count));
+  }
+
   for (int i = 0; i < device_count; ++i) {
     for (int j = 0; j < device_count; ++j) {
       if (i != j) {

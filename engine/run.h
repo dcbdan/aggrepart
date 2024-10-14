@@ -6,7 +6,7 @@
 struct mem_t {
   void* data;
   uint64_t size;
-  int gpu;
+  int device;
 };
 
 // Assumption:
