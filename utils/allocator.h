@@ -10,6 +10,8 @@ struct allocator_t {
   void free(uint64_t offset);
 
   void print(std::ostream& out) const;
+
+  void clear(); // free everything
 private:
   struct block_t {
     uint64_t beg;

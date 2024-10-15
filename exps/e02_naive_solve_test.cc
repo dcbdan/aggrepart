@@ -8,7 +8,7 @@
 #include "../solve/sol.h"
 #include "../solve/builder.h"
 
-#include "misc.h"
+#include "problems.h"
 
 int main(int argc, char** argv) {
   dtype_t dtype = dtype_t::f32;

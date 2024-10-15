@@ -39,6 +39,8 @@ struct graph_t {
 
     set<int> inits() const { return _inits; }
 
+    bool has_write() const { return writes().size() > 0; }
+
     bool has_init() const { return inits().size() > 0; }
   private:
     int _loc;
@@ -106,7 +108,7 @@ struct graph_t {
 
   void print_graphviz(std::ostream& out) const;
 
-  int tensor_loc(int tensor_id) const { return tensors.at(tensor_id).loc(); }
+  int tensor_loc(int tensor_id) const;
 
   set<int> out_tensors() const;
 

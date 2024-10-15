@@ -92,12 +92,21 @@ struct run_state_t {
       for(int const& inn: node.deps) {
         auto& inn_info = node_infos[inn];
 
-        if(!acquired && bool(inn_info.maybe_stream) && device == get_device(inn)) {
+        if(inn_info.maybe_event) {
+          events.push_back(inn_info.maybe_event.value());
+        } else {
+          if(acquired) {
+            throw std::runtime_error("can't acquire this stream: already have a stream");
+          }
+          if(device != get_device(inn)) {
+            throw std::runtime_error("can't acquire this stream: wrong device");
+          }
+          if(!inn_info.maybe_stream) {
+            throw std::runtime_error("this input has no stream, should have an event...");
+          }
           stream = inn_info.maybe_stream.value();
           inn_info.maybe_stream = std::nullopt;
           acquired = true;
-        } else {
-          events.push_back(inn_info.maybe_event.value());
         }
       }
       if(!acquired) {
@@ -111,13 +120,35 @@ struct run_state_t {
     //   will need to depend on this node via an event
     // * If there is one outgoing node and it can reuse this stream, we won't need
     //   an event
+    //   * But, if that outgoing node has an input that doesn't have an event,
+    //     we need an event! TODO
     bool needs_event;
     if(node.outs.size() == 0) {
       needs_event = false;
     } else if(node.outs.size() == 1) {
-      int const& out = *node.outs.begin();
-      if(device == get_device(out)) {
+      int const& out_node = *node.outs.begin();
+      if(device == get_device(out_node)) {
         needs_event = false;
+        for(int const& dep_node: graph.nodes[out_node].deps) {
+          if(needs_event) {
+            break;
+          }
+          if(dep_node == node_id) {
+            continue;
+          }
+          if(dep_node >= node_infos.size()) {
+            continue;
+          }
+          auto const& dep_info = node_infos[dep_node];
+          if(device == dep_info.device) {
+            if(!bool(dep_info.maybe_event)) {
+              // Uh oh, this guy don't got an event,
+              // so we need it
+              needs_event = true;
+              break;
+            }
+          }
+        }
       } else {
         needs_event = true;
       }

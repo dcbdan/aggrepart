@@ -86,6 +86,22 @@ bool set_equal(set<T> const& xs, set<T> const& ys) {
 }
 
 template <typename T>
+bool is_subset(set<T> const& xs, set<T> const& ys) {
+  if(xs.size() > ys.size()) {
+    return false;
+  }
+  auto xi = xs.begin();
+  auto yi = ys.begin();
+  for(; xi != xs.end(); ++xi, ++yi) {
+    for(; yi != ys.end() && *xi != *yi; ++yi) {}
+    if(yi == ys.end()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <typename T>
 bool vector_equal(vector<T> const& xs, vector<T> const& ys) {
   if(xs.size() != ys.size()) {
     return false;

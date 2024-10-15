@@ -133,6 +133,17 @@ void allocator_t::print(std::ostream& out) const {
   }
 }
 
+void allocator_t::clear() {
+  uint64_t beg = blocks[0].beg;
+  uint64_t end = blocks.back().end;
+  blocks.resize(0);
+  blocks.push_back(block_t {
+    .beg = beg,
+    .end = end,
+    .occupied = false
+  });
+}
+
 std::ostream& operator<<(std::ostream& out, allocator_t const& a) {
   a.print(out);
   return out;

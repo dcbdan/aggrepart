@@ -38,5 +38,3 @@ struct touch_t {
     optional<castable_t> castable,
     dtype_t dtype);
 };
-
-

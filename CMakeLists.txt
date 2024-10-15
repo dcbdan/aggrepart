@@ -58,5 +58,6 @@ if(${ENGINE})
   endfunction()
 
   add_experiment_with_engine("e03_naive_execute")
+  add_experiment_with_engine("e04_heuristic_test")
 endif()
 

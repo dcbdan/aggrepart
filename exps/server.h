@@ -66,7 +66,20 @@ struct server_t {
     execute_fill(0, val, nelem, mem.data);
   }
 
+  uint64_t nlocs() const {
+    return ptrs.size();
+  }
+
+  void clear() {
+    for(allocator_t& a: allocators) {
+      a.clear();
+    }
+    data = map<int, mem_t>();
+  }
+
   map<int, mem_t> data;
   vector<allocator_t> allocators;
   vector<void*> ptrs;
 };
+
+

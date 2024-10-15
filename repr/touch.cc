@@ -79,4 +79,3 @@ touch_t touch_t::intersect(
     .dtype = dtype
   };
 }
-

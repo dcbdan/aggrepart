@@ -140,15 +140,29 @@ graph_t builder_create_graph(
     }
   }
 
-  auto get_set_hrect_and_is_overlapping = [&](set<int> const& elems)
-    -> tuple<hrect_t<uint64_t>, bool>
+  int _next_tid = info.out_tids.back() + 1;
+  auto get_new_tid = [&] {
+    int ret = _next_tid;
+    _next_tid += 1;
+    return ret;
+  };
+
+  vector<int> node_to_tensor(sol.nodes.size(), -1);
+  vector<hrect_t<uint64_t>> node_regions(sol.nodes.size());
+
+  auto get_set_hrect_and_is_overlapping = 
+    [&](vector<sol_t::which_t> const& inns) 
+      -> tuple<hrect_t<uint64_t>, bool>
   {
     vector<hrect_t<uint64_t>> hrects;
-    hrects.reserve(elems.size());
-    for(int const& elem: elems) {
-      hrects.push_back(refi_rel.get_region(elem));
+    for(auto const& inn: inns) {
+      if(inn.is_input()) {
+        hrects.push_back(refi_rel.get_region(inn.elem));
+      } else {
+        hrects.push_back(node_regions.at(inn.node_id));
+      }
     }
-
+    
     hrect_t<uint64_t> ret = hrects[0];
     for(int h = 1; h != hrects.size(); ++h) {
       hrect_t<uint64_t> const& eh = hrects[h];
@@ -170,16 +184,6 @@ graph_t builder_create_graph(
     return { ret, false };
   };
 
-  int _next_tid = info.out_tids.back() + 1;
-  auto get_new_tid = [&] {
-    int ret = _next_tid;
-    _next_tid += 1;
-    return ret;
-  };
-
-  vector<int> node_to_tensor(sol.nodes.size(), -1);
-  vector<hrect_t<uint64_t>> node_regions(sol.nodes.size());
-
   // Step 2:
   //   For each node in reverse order,
   //     insert that node into the graph:
@@ -192,7 +196,7 @@ graph_t builder_create_graph(
     // 0. get the hrect of the node and determine if these
     //    touches are copies or updates
     auto [out_region, requires_castable] =
-      get_set_hrect_and_is_overlapping(node.elems());
+      get_set_hrect_and_is_overlapping(node.inns);
     if(requires_castable && !bool(maybe_castable)) {
       throw std::runtime_error("requires a castable but none provided!");
     }

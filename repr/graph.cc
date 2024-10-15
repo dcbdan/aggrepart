@@ -98,7 +98,10 @@ int graph_t::touch(
   if(inn_tensor_id == out_tensor_id) {
     throw std::runtime_error("out cannot be in for touch op");
   }
-  if(castable != op.castable) {
+  if(bool(castable) && !bool(op.castable)) {
+    throw std::runtime_error("this graph permits no castable");
+  }
+  if(bool(castable) && bool(op.castable) && castable.value() != op.castable.value()) {
     throw std::runtime_error("touch has differing castable");
   }
 
@@ -108,7 +111,10 @@ int graph_t::touch(
   // Since we are doing a touches onto this tensor, we have to make
   // sure that the output data is zero (zero according to the castable)
   // initialized before any touch actually occurs
-  if(bool(castable) && !out.has_init()) {
+  if(bool(op.castable) && !out.has_init()) {
+    if(out.has_write()) {
+      throw std::runtime_error("this has already been written to, can't init!");
+    }
     // ok, we must zero initialize
     fill_t fill {
       .scalar = scalar_t::make_zero(castable.value(), dtype),
@@ -194,7 +200,7 @@ void graph_t::print_graphviz(std::ostream& out) const {
   for(int id = 0; id != nodes.size(); ++id) {
     node_t const& node = nodes[id];
 
-    string label;
+    string label = "n" + write_with_ss(id) + " ";
     string color = "";
 
     if(node.is_touch()) {
@@ -210,8 +216,11 @@ void graph_t::print_graphviz(std::ostream& out) const {
     } else {
       throw std::runtime_error("should not happen: missing node case");
     }
-    label += "tid" + write_with_ss(node.inn_tensor_id);
-    label += "->";
+
+    if(!node.is_fill()) {
+      label += "tid" + write_with_ss(node.inn_tensor_id);
+      label += "->";
+    }
     label += "tid" + write_with_ss(node.out_tensor_id);
 
     out << tab
@@ -227,6 +236,14 @@ void graph_t::print_graphviz(std::ostream& out) const {
     }
   }
   out << "}" << endl;
+}
+
+int graph_t::tensor_loc(int tid) const {
+  auto iter = tensors.find(tid);
+  if(iter == tensors.end()) {
+    throw std::runtime_error("tensor_loc failed: tensor not in graph");
+  }
+  return iter->second.loc();
 }
 
 set<int> graph_t::out_tensors() const {
@@ -290,8 +307,10 @@ int graph_t::touch_unto(
     // allocate temporary memory for moving from and
     // write into it
     move_src_tensor = alloc(inn.loc(), op.write_shape());
+    touch_t copy_subset = op.inn_to_write();
+    copy_subset.castable = std::nullopt;
     int x = touch(
-      op.inn_to_write(),
+      copy_subset,
       inn_tensor_id, move_src_tensor,
       curr_deps);
     curr_deps = set<int>({x});
