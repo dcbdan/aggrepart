@@ -13,3 +13,6 @@
 
 // Always chain if possible otherwise do a naive solution
 void heuristic02(sol_t& sol);
+
+// pop off all local objects and recv the rest from the previous loc
+void heuristic03_ring(sol_t& sol, vector<int> loc_order);

@@ -102,6 +102,8 @@ struct graph_t {
   int alloc_(int loc, vector<uint64_t> shape, tensor_type_t type);
   void alloc_(int tensor_id, int loc, vector<uint64_t> shape, tensor_type_t type);
 
+  void set_min_tensor_id(int m);
+
   int new_tensor_id() const;
 
   int num_locations() const;
@@ -134,6 +136,7 @@ struct graph_t {
 
   vector<node_t> nodes;
   map<int, tensor_t> tensors;
+  int _min_tensor_id;
 };
 
 std::ostream& operator<<(std::ostream& out, graph_t::tensor_type_t const& tt);

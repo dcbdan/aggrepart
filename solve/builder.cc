@@ -133,18 +133,19 @@ graph_t builder_create_graph(
     for(int elem = 0; elem != refi_rel_locs.size(); ++elem) {
       vector<uint64_t> shape = hrect_shape(refi_rel.get_region(elem));
 
-      map<int, int> const& to_tensor_id = refi_rel_locs[elem];
+      map<int, int> const& to_tensor_id = refi_rel_locs.at(elem);
       for(auto const& [loc, tensor_id]: to_tensor_id) {
         ret.alloc_(tensor_id, loc, shape, graph_t::tensor_type_t::tt_inn);
       }
     }
   }
 
-  int _next_tid = info.out_tids.back() + 1;
+  // This will prevent us from allocating over any of the 
+  // output tids
+  ret.set_min_tensor_id(info.out_tids.back() + 1);
+
   auto get_new_tid = [&] {
-    int ret = _next_tid;
-    _next_tid += 1;
-    return ret;
+    return ret.new_tensor_id();
   };
 
   vector<int> node_to_tensor(sol.nodes.size(), -1);
@@ -192,7 +193,8 @@ graph_t builder_create_graph(
   //     maintain a map from node_id to tensor
   //   Note: the first builder_info.out_tids.size() are tt_out (!)
   for(int node_id = sol.nodes.size() - 1; node_id >= 0; node_id--) {
-    auto node = sol.nodes[node_id];
+    auto const& node = sol.nodes.at(node_id);
+
     // 0. get the hrect of the node and determine if these
     //    touches are copies or updates
     auto [out_region, requires_castable] =

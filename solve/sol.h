@@ -69,6 +69,9 @@ struct sol_t {
 
   // return nodes.size() if not found!
   int find(int start_id, info_t const& info);
+
+  optional<string> check() const;
+  bool has_input_elem(int elem, int loc) const;
 };
 
 void solve_naive(sol_t& sol);

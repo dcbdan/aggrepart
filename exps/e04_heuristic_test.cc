@@ -30,7 +30,17 @@ void run_it(
 {
   auto [sol, builder_info, fini_rel] = builder_init_sol(init_rel, fini_pl);
 
+
   solve_it(sol);
+
+  auto maybe_error_msg = sol.check();
+  if(maybe_error_msg) {
+    throw std::runtime_error(maybe_error_msg.value());
+  }
+  if(!sol.is_set()) {
+    throw std::runtime_error("did not solve the sol");
+  }
+
   DOUT(sol);
 
   graph_t graph = builder_create_graph(sol, builder_info, dtype, castable);
@@ -106,5 +116,22 @@ int main(int argc, char** argv) {
   run_it_("naive_setup",     [](sol_t& sol) { solve_naive(sol); });
   run_it_("naive",           [](sol_t& sol) { solve_naive(sol); });
   run_it_("to_one_spot",     [](sol_t& sol) { heuristic02(sol); });
+
+  if(nlocs == 8) {
+    run_it_("ring", [](sol_t& sol) { 
+      vector<int> loc_order{ 0, 2, 3, 1, 5, 7, 6, 4 };
+      heuristic03_ring(sol, loc_order); 
+    });
+  } else if(nlocs == 4) {
+    run_it_("ring", [](sol_t& sol) { 
+      vector<int> loc_order{ 0, 2, 3, 1 }; // 1 to 0 is slow, though
+      heuristic03_ring(sol, loc_order); 
+    });
+  } else if(nlocs == 2) {
+    run_it_("ring", [](sol_t& sol) { 
+      vector<int> loc_order{ 0, 1 }; // 1 to 0 is slow, though
+      heuristic03_ring(sol, loc_order); 
+    });
+  }
 }
 

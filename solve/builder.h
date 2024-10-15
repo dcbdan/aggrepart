@@ -15,10 +15,9 @@ struct builder_info_t {
   partition_t const& out_part;
 
   int get_inn_tensor_id(int elem, int loc) const {
-    map<int, int> const& loc_to_tensor_id = refi_rel.locations.get()[elem];
+    map<int, int> const& loc_to_tensor_id = refi_rel.locations.get().at(elem);
     return loc_to_tensor_id.at(loc);
   }
-
 };
 
 // These functions come in pairs.

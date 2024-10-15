@@ -143,9 +143,9 @@ vector<int> partdim_t::refine_counts(partdim_t const& other) const {
 
 tuple<uint64_t, uint64_t> partdim_t::which_vals(int blk) const {
   if(blk == 0) {
-    return {0, spans[0]};
+    return {0, spans.at(0)};
   }
-  return {spans[blk-1], spans[blk]};
+  return {spans.at(blk-1), spans.at(blk)};
 }
 
 int partdim_t::which_block(uint64_t val) const {

@@ -85,8 +85,7 @@ bool sol_t::is_set() const {
 sol_t::which_t sol_t::append(int start_id, sol_t::info_t const& inn) {
   if(inn.elems.size() == 1) {
     int const& elem = *inn.elems.begin();
-    set<int> const& elem_init_locs = init_locs.at(elem);
-    if(elem_init_locs.count(inn.loc) > 0) {
+    if(has_input_elem(elem, inn.loc)) {
       // This is an input node and we already have this guy
       return which_t::make_input(elem, inn.loc);
     }
@@ -138,6 +137,40 @@ void solve_naive(sol_t& sol) {
   for(int node_id = 0; node_id != sol.nodes.size(); ++node_id) {
     sol.naive(node_id);
   }
+}
+
+optional<string> sol_t::check() const {
+  for(int nid = 0; nid != nodes.size(); ++nid) {
+    auto const& node = nodes[nid];
+    set<int> const& elems = node.elems();
+
+    set<int> es;
+    for(auto const& inn: node.inns) {
+      if(inn.is_input()) {
+        es.insert(inn.elem);
+        if(!has_input_elem(inn.elem, inn.loc)) {
+          return "missing input element";
+        }
+      } else {
+        auto const& inn_node = nodes.at(inn.node_id);
+        set_union_into(es, inn_node.elems());
+      }
+    }
+    if(!set_equal(es, elems)) {
+      return "node's inputs do not equal expected set!";
+    }
+  }
+
+  return std::nullopt;
+}
+
+bool sol_t::has_input_elem(int elem, int loc) const {
+  auto ie = init_locs.find(elem);
+  if(ie == init_locs.end()) {
+    return false;
+  }
+  set<int> const& locs = ie->second;
+  return locs.count(loc) > 0;
 }
 
 void sol_t::node_t::print(sol_t const& self, std::ostream& out) const {

@@ -1,7 +1,7 @@
 #include "graph.h"
 
 graph_t::graph_t(dtype_t d, optional<castable_t> c)
-  : dtype(d), castable(c)
+  : dtype(d), castable(c), _min_tensor_id(0)
 {}
 
 graph_t::tensor_t::tensor_t()
@@ -98,7 +98,7 @@ int graph_t::touch(
   if(inn_tensor_id == out_tensor_id) {
     throw std::runtime_error("out cannot be in for touch op");
   }
-  if(bool(castable) && !bool(op.castable)) {
+  if(!bool(castable) && bool(op.castable)) {
     throw std::runtime_error("this graph permits no castable");
   }
   if(bool(castable) && bool(op.castable) && castable.value() != op.castable.value()) {
@@ -153,6 +153,10 @@ int graph_t::touch(
   return ret;
 }
 
+void graph_t::set_min_tensor_id(int new_val) {
+  _min_tensor_id = new_val;
+}
+
 int graph_t::new_tensor_id() const {
   int tid = 0;
   if(tensors.size() > 0) {
@@ -161,7 +165,7 @@ int graph_t::new_tensor_id() const {
     // the new tid is one larger than the largest element
     tid = 1 + iter->first;
   }
-  return tid;
+  return std::max(_min_tensor_id, tid);
 }
 
 int graph_t::num_locations() const {
