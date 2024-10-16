@@ -10,6 +10,13 @@ void set_seed(int seed) {
   random_gen() = std::mt19937(seed);
 }
 
+int runif(int beg, int end) {
+  return std::uniform_int_distribution<>(beg, end-1)(random_gen());
+}
+int runif(int n) {
+  return runif(0, n);
+}
+
 // Stolen from http://myeyesareblind.com/2017/02/06/Combine-hash-values/
 // where this is the boost implementation
 void hash_combine_impl(std::size_t& seed, std::size_t value)

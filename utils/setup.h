@@ -16,6 +16,7 @@
 #include <queue>
 #include <chrono>
 #include <fstream>
+#include <memory>
 
 using std::vector;
 using std::tuple;
@@ -246,6 +247,9 @@ std::ostream& operator<<(std::ostream& out, tuple<T, U> const& x12) {
 std::mt19937& random_gen();
 
 void set_seed(int seed);
+
+int runif(int beg, int end);
+int runif(int n);
 
 template <typename T>
 using priority_queue_least = std::priority_queue<T, vector<T>, std::greater<T>>;

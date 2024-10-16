@@ -28,9 +28,18 @@ struct sol_t {
     { return which_t { node_id, 0, 0 }; }
   };
 
+  sol_t();
+
   sol_t(
     vector<info_t> const& fini_state,
     map<int, set<int>> const& init_locs);
+
+  sol_t(
+    vector<info_t> const& fini_state,
+    int nlocs,
+    map<int, set<int>> const& init_locs);
+
+  sol_t(sol_t const& other);
 
   struct node_t {
     info_t fini;
@@ -59,7 +68,9 @@ struct sol_t {
   vector<node_t> nodes;
 
   // elem -> locs
-  map<int, set<int>> const init_locs;
+  int nlocs;
+  std::shared_ptr<map<int, set<int>>> init_locs; 
+  // ^ this should never get modified
 
   int get_preferred_input_loc(int elem, int best_loc);
 

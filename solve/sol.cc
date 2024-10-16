@@ -1,14 +1,29 @@
 #include "sol.h"
 
+sol_t::sol_t()
+  : nlocs(0), init_locs(nullptr)
+{}
+
+sol_t::sol_t(
+  vector<info_t> const& fini_state,
+  map<int, set<int>> const& init_locs)
+  : sol_t(fini_state, 0, init_locs)
+{}
+
 sol_t::sol_t(
   vector<sol_t::info_t> const& fini_state,
+  int nlocs,
   map<int, set<int>> const& init_locs)
-  : init_locs(init_locs)
+  : nlocs(nlocs), init_locs(std::make_shared<map<int, set<int>>>(init_locs))
 {
   for(auto const& info: fini_state) {
     nodes.push_back(node_t { .fini = info, .inns = {} });
   }
 }
+
+sol_t::sol_t(sol_t const& other)
+  : nodes(other.nodes), nlocs(other.nlocs), init_locs(other.init_locs)
+{}
 
 void sol_t::naive(int which_node) {
   node_t& node = nodes.at(which_node);
@@ -116,7 +131,7 @@ int sol_t::find(int start_id, sol_t::info_t const& info) {
 }
 
 int sol_t::get_preferred_input_loc(int elem, int best_loc) {
-  set<int> const& locs = init_locs.at(elem);
+  set<int> const& locs = init_locs->at(elem);
   if(locs.count(best_loc) > 0) {
     return best_loc;
   }
@@ -135,7 +150,9 @@ int sol_t::get_preferred_input_loc(int elem, int best_loc) {
 void solve_naive(sol_t& sol) {
   // Note that sol.nodes grows!
   for(int node_id = 0; node_id != sol.nodes.size(); ++node_id) {
-    sol.naive(node_id);
+    if(!sol.nodes[node_id].is_set()) {
+      sol.naive(node_id);
+    }
   }
 }
 
@@ -165,8 +182,8 @@ optional<string> sol_t::check() const {
 }
 
 bool sol_t::has_input_elem(int elem, int loc) const {
-  auto ie = init_locs.find(elem);
-  if(ie == init_locs.end()) {
+  auto ie = init_locs->find(elem);
+  if(ie == init_locs->end()) {
     return false;
   }
   set<int> const& locs = ie->second;
