@@ -29,8 +29,42 @@ double time_difference_micro_seconds(
 #include <thread>
 void sleep_some() {
   using namespace std::chrono_literals;
-  std::this_thread::sleep_for(100ms);
+  std::this_thread::sleep_for(75ms);
 }
+
+struct ring_t {
+  ring_t() {
+    order = vector<int>{ 0, 2, 3, 1, 5, 7, 6, 4 };
+  }
+
+  int get_lhs_neighbor(int loc) {
+    for(int i = 0; i != order.size(); ++i) {
+      if(order[i] == loc) {
+        if(i == 0) {
+          return order.back();
+        } else {
+          return order[i-1];
+        }
+      }
+    }
+    throw std::runtime_error("should not reach");
+  }
+  int get_rhs_neighbor(int loc) {
+    for(int i = 0; i != order.size(); ++i) {
+      if(order[i] == loc) {
+        if(i == order.size() - 1) {
+          return order[0];
+        } else {
+          return order[i+1];
+        }
+      }
+    }
+    throw std::runtime_error("should not reach");
+  }
+
+
+  vector<int> order;
+};
 
 int main(int argc, char** argv) {
   dtype_t dtype = dtype_t::f32;
@@ -41,6 +75,7 @@ int main(int argc, char** argv) {
   args.set_default<uint64_t>("nrow", 10000);
   args.set_default<uint64_t>("ncol", 10000);
   args.set_default<int>("nlocs", 4);
+  args.set_default<bool>("use_ring", false);
 
   uint64_t GB = 1000lu * 1000lu * 1000lu;
   args.set_default<uint64_t>("memsize", 10*GB);
@@ -53,6 +88,11 @@ int main(int argc, char** argv) {
 
   if(canonical && nlocs != 4) {
     throw std::runtime_error("cononical requires nlocs to be 4");
+  }
+
+  bool use_ring = args.get<bool>("use_ring");
+  if(use_ring && nlocs != 8) {
+    throw std::runtime_error("can only use ring with 8 locs");
   }
 
   auto [init_pl, fini_pl] =
@@ -70,6 +110,7 @@ int main(int argc, char** argv) {
   // about the underlying cluster
   sol_init.nlocs = nlocs;
 
+  ring_t ring;
   tree_state_t::function_cost_t f_cost = [&](sol_t const& sol_)
     -> double
   {
@@ -134,20 +175,29 @@ int main(int argc, char** argv) {
       }
 
       if(avail.size() > 0) {
-        ret.emplace_back();
-        vector<info_t>& is = ret.back();
-        for(int const& elem: avail) {
-          is.push_back(info_t::singleton(elem, init_node.loc()));
-        }
-        int another_loc = runif(sol_init.nlocs - 1);
-        if(another_loc >= init_node.loc()) {
-          another_loc++;
+        vector<int> other_locs;
+        if(use_ring) {
+          other_locs.push_back(ring.get_lhs_neighbor(init_node.loc()));
+          other_locs.push_back(ring.get_rhs_neighbor(init_node.loc()));
+        } else {
+          int another_loc = runif(sol_init.nlocs - 1);
+          if(another_loc >= init_node.loc()) {
+            another_loc++;
+          }
         }
 
-        is.push_back(info_t { 
-          .elems = the_rest,
-          .loc = another_loc
-        });
+        for(int const& another_loc: other_locs) {
+          ret.emplace_back();
+          vector<info_t>& is = ret.back();
+          for(int const& elem: avail) {
+            is.push_back(info_t::singleton(elem, init_node.loc()));
+          }
+
+          is.push_back(info_t { 
+            .elems = the_rest,
+            .loc = another_loc
+          });
+        }
       }
     }
 

@@ -30,7 +30,6 @@ void run_it(
 {
   auto [sol, builder_info, fini_rel] = builder_init_sol(init_rel, fini_pl);
 
-
   solve_it(sol);
 
   auto maybe_error_msg = sol.check();

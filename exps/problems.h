@@ -2,7 +2,8 @@ tuple<placement_t, placement_t>
 make_pls_matrix_all_reduce(
   uint64_t nrow,
   uint64_t ncol,
-  int nlocs)
+  int nlocs,
+  bool split_further = false)
 {
   partition_t partition { vector<partdim_t> {
     partdim_t::singleton(nrow),
@@ -24,7 +25,17 @@ make_pls_matrix_all_reduce(
     }
   }
 
-  return { init, fini };
+  if(split_further) {
+    partition_t p {
+      .partdims = vector<partdim_t> {
+        partdim_t::split(nrow, nlocs),
+        partdim_t::singleton(ncol)
+      }
+    };
+    return { init.construct_refinement(p), fini };
+  } else {
+    return { init, fini };
+  }
 }
 
 // -------------    -------------
