@@ -17,6 +17,8 @@
 #include "server.h"
 #include "engine_misc.h"
 
+#include "neighbor_splitter.h"
+
 double time_difference_micro_seconds(
   timestamp_t const& beg, 
   timestamp_t const& end)
@@ -145,6 +147,9 @@ int main(int argc, char** argv) {
     return ms; 
   };
 
+  splitter_from_neighbors_t splitter_n =
+    splitter_from_neighbors_t::make_v100(nlocs);
+
   tree_state_t::function_split_t f_split = [&](sol_t const& sol_init, int start_id) 
     -> vector<sol_t>
   {
@@ -158,6 +163,8 @@ int main(int argc, char** argv) {
     }
 
     vector<vector<info_t>> ret;
+
+    //ret.push_back(splitter_n(sol_init, start_id));
 
     // If we can chain, add the chaining as a solution
     for(int id = start_id + 1; id != sol_init.nodes.size(); ++id) {

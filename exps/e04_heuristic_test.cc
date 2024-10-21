@@ -16,6 +16,25 @@
 #include "problems.h"
 #include "server.h"
 #include "engine_misc.h"
+#include "neighbor_splitter.h"
+
+void neighbor_splitter(splitter_from_neighbors_t splitter, sol_t& sol) {
+  for(int id = 0; id != sol.nodes.size(); ++id) {
+    {
+      auto const& node = sol.nodes[id];
+      if(node.is_set()) {
+        continue;
+      }
+    }
+
+    auto infos = splitter(sol, id);
+    vector<sol_t::which_t> inns;
+    for(auto const& info: infos) {
+      inns.push_back(sol.append(id, info));
+    }
+    sol.nodes[id].inns = inns;
+  }
+}
 
 void run_it(
   server_t& server,
@@ -123,6 +142,11 @@ int main(int argc, char** argv) {
   run_it_("naive_setup",     [](sol_t& sol) { solve_naive(sol); });
   run_it_("naive",           [](sol_t& sol) { solve_naive(sol); });
   run_it_("to_one_spot",     [](sol_t& sol) { heuristic02(sol); });
+
+  {
+    auto splitter = splitter_from_neighbors_t::make_v100(nlocs);
+    run_it_("neighbor_splitter", [&](sol_t& sol){ neighbor_splitter(splitter, sol); });
+  }
 
   if(nlocs == 8) {
     run_it_("ring", [](sol_t& sol) { 
