@@ -31,15 +31,23 @@ void tree_state_t::step() {
   }
 
   vector<sol_t> next_sols;
-  int start_id;
+  int init_start_id;
   {
     info_t const& info = pending.top(); 
     next_sols = f_split(info.sol, info.start_id);
-    start_id = info.start_id + 1;
+    init_start_id = info.start_id + 1;
     pending.pop();
   }
 
   for(sol_t const& sol: next_sols) {
+    int start_id = init_start_id;
+    for(; start_id != sol.nodes.size(); ++start_id) {
+      auto const& node = sol.nodes[start_id];
+      if(!node.is_set()) {
+        break;
+      }
+    }
+
     info_t info {
       .sol = sol,
       .cost = f_cost(sol),

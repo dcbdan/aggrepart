@@ -71,22 +71,22 @@ int main(int argc, char** argv) {
   castable_t castable = castable_t::add;
 
   args_t args(argc, argv);
-  args.set_default<bool>("canonical", true);
+  args.set_default<string>("plan", "allreduce");
   args.set_default<uint64_t>("nrow", 10000);
   args.set_default<uint64_t>("ncol", 10000);
   args.set_default<int>("nlocs", 4);
   args.set_default<bool>("use_ring", false);
 
   uint64_t GB = 1000lu * 1000lu * 1000lu;
-  args.set_default<uint64_t>("memsize", 10*GB);
+  args.set_default<uint64_t>("memsize", 10);
 
-  bool canonical = args.get<bool>("canonical");
+  string plan = args.get<string>("plan");
   uint64_t nrow = args.get<uint64_t>("nrow");
   uint64_t ncol = args.get<uint64_t>("ncol");
   int nlocs = args.get<int>("nlocs");
-  uint64_t memsize = args.get<uint64_t>("memsize");
+  uint64_t memsize = GB*args.get<uint64_t>("memsize");
 
-  if(canonical && nlocs != 4) {
+  if(plan == "canonical" && nlocs != 4) {
     throw std::runtime_error("cononical requires nlocs to be 4");
   }
 
@@ -95,10 +95,18 @@ int main(int argc, char** argv) {
     throw std::runtime_error("can only use ring with 8 locs");
   }
 
-  auto [init_pl, fini_pl] =
-    canonical
-    ? make_pls_canonical_4locs_rows_to_cols(nrow, ncol)
-    : make_pls_matrix_all_reduce(nrow, ncol, nlocs);
+  auto [init_pl, fini_pl] = [&] {
+    if(plan == "canonical") {
+      return make_pls_canonical_4locs_rows_to_cols(nrow, ncol);
+    } 
+    if(plan == "allreduce") {
+      return make_pls_matrix_all_reduce(nrow, ncol, nlocs);
+    } 
+    if(plan == "to-strip") {
+      return make_pls_row_strip_to_col_strip(nrow, ncol, nlocs);
+    }
+    throw std::runtime_error("invalid plan");
+  }();
 
   relation_t init_rel = relation_t::make_from_placement(init_pl);
 
