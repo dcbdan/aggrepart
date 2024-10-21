@@ -83,3 +83,34 @@ make_pls_canonical_4locs_rows_to_cols(
 
   return { init, fini };
 }
+
+tuple<placement_t, placement_t>
+make_pls_row_strip_to_col_strip(
+ uint64_t nrow,
+ uint64_t ncol,
+ int nlocs)
+{
+  partition_t part_init { vector<partdim_t> {
+    partdim_t::split(nrow, nlocs),
+    partdim_t::split(ncol, nlocs)
+  }};
+
+  partition_t part_fini { vector<partdim_t> {
+    partdim_t::split(nrow, 1),
+    partdim_t::split(ncol, nlocs)
+  }};
+
+  placement_t init = placement_t::make(part_init, 1);
+  placement_t fini = placement_t::make(part_fini, 1);
+
+  for(int r = 0; r != nlocs; ++r) {
+  for(int c = 0; c != nlocs; ++c) {
+    init.get_locs({r,c}, 0).insert(r);
+  }}
+
+  for(int c = 0; c != nlocs; ++c) {
+    fini.get_locs({0,c}, 0).insert(c);
+  }
+
+  return { init, fini };
+}
