@@ -1,0 +1,1 @@
+singularity exec ~/Containers/z3.sif python3 $1
