@@ -1,5 +1,4 @@
 from setup import *
-from sol import *
 
 class Problem:
   def __init__(
@@ -370,17 +369,6 @@ def solve_problem(problem, use_full_solver_interface = True):
         print(f"{elems}@{loc}|t={time}")
         for inn_elems, inn_loc in inns:
           print(f"  {inn_elems}@{inn_loc}")
-
-      #########print("")
-      #########sol = Sol(problem.init_elem_locs_dict, problem.fini_elems_locs_list)
-      #########sol.solve(get_inns)
-      #########print("")
-
-      #########for node in sol.nodes:
-      #########  print(f"{node.elems} @ {node.loc}")
-      #########  for elems, loc in node.inns:
-      #########    print(f"  {elems} @ {loc}")
-      #########  print("")
     else:
       print("no-sat")
 
