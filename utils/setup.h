@@ -417,6 +417,15 @@ vector<T> parse_vector(string const& s, char sep = ',', char open = '[', char cl
 }
 
 template <typename T>
+set<T> parse_set(string const& s, char sep = ',', char open = '[', char close = ']')
+{
+  vector<T> ret = parse_vector<T>(s, sep, open, close);
+  return set<T>(ret.begin(), ret.end());
+}
+
+vector<string> split_line(string const& line, char split);
+
+template <typename T>
 string write_with_ss(T const& val)
 {
   std::ostringstream ss;

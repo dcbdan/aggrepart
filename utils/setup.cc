@@ -17,6 +17,27 @@ void hash_combine_impl(std::size_t& seed, std::size_t value)
   seed ^= value + 0x9e3779b9 + (seed<<6) + (seed>>2);
 }
 
+vector<string> split_line(string const& line, char split) {
+  vector<string> ret;
+  if(line.size() == 0) {
+    return ret;
+  }
+
+  string word;
+  for(char const& c: line) {
+    if(c == split) {
+      ret.push_back(word);
+      word = "";
+    } else {
+      word += c;
+    }
+  }
+
+  ret.push_back(word);
+
+  return ret;
+}
+
 vector<int> divide_evenly_int(int num_parts, int n) {
   if(num_parts <= 0 || n <= 0) {
     throw std::runtime_error("invalid args");

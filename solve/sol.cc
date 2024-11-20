@@ -1,12 +1,41 @@
 #include "sol.h"
 
 sol_t::sol_t(
+  vector<sol_t::direct_t> const& solved_nodes,
+  map<int, set<int>> const& init_locs)
+  : init_locs(init_locs)
+{
+  // Loop 1: add all the nodes, unsolved
+  for(auto const& [elems, loc, time, inns]: solved_nodes) {
+    if(elems.size() == 1) {
+      int elem = *elems.begin();
+      if(init_locs.at(elem).count(loc) > 0) {
+        throw std::runtime_error("do not include inputs in direct solution");
+      }
+    }
+
+    info_t info { .elems = elems, .loc = loc };
+    nodes.push_back(node_t { .fini = info, .inns = {}, .time = time });
+  }
+  // Loop 2: add the inputs of each node
+  // (Note, this will succeed; it'll insert nodes if necc!)
+  for(int id = 0; id != nodes.size(); ++id) {
+    auto const& [_0, _1, _2, inns] = solved_nodes[id];
+    for(auto const& [elems, loc]: inns) {
+      info_t info { .elems = elems, .loc = loc };
+      auto which = append(id + 1, info);
+      nodes[id].inns.push_back(which);
+    }
+  }
+}
+
+sol_t::sol_t(
   vector<sol_t::info_t> const& fini_state,
   map<int, set<int>> const& init_locs)
   : init_locs(init_locs)
 {
   for(auto const& info: fini_state) {
-    nodes.push_back(node_t { .fini = info, .inns = {} });
+    nodes.push_back(node_t { .fini = info, .inns = {}, .time = -1 });
   }
 }
 
@@ -82,6 +111,15 @@ bool sol_t::is_set() const {
   return true;
 }
 
+bool sol_t::time_is_set() const {
+  for(auto const& node: nodes) {
+    if(node.time < 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 sol_t::which_t sol_t::append(int start_id, sol_t::info_t const& inn) {
   if(inn.elems.size() == 1) {
     int const& elem = *inn.elems.begin();
@@ -100,7 +138,7 @@ sol_t::which_t sol_t::append(int start_id, sol_t::info_t const& inn) {
   }
 
   // We need to solve for this inn
-  nodes.push_back(node_t { .fini = inn, .inns = {} });
+  nodes.push_back(node_t { .fini = inn, .inns = {}, .time = -1 });
   return which_t::make_node(nodes.size() - 1);
 }
 

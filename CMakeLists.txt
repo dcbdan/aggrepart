@@ -26,6 +26,7 @@ endfunction()
 
 add_experiment("e01_hello")
 add_experiment("e02_naive_solve_test")
+add_experiment("e05_z3_setup")
 
 if(${ENGINE})
   enable_language(CUDA)

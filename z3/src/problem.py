@@ -281,6 +281,61 @@ class Problem:
       self.constrain_resources(),
       self.init_fini_time())
 
+def solve_problem_v2(problem):
+  s = zz.Solver()
+  s.add(problem.full_problem())
+  if s.check() != zz.sat:
+    return None
+  model = s.model()
+
+  # now, attempt to create the solution object
+  def get_inns(elems, loc):
+    if len(elems) == 1:
+      if loc in problem.init_elem_locs_dict[elems]:
+        return [], 0
+
+    for time in range(1, problem.max_time + 1):
+      moved_here_vars, partition_here_vars = problem.iff_vars(elems, loc, time)
+      for did_move in moved_here_vars:
+        if model.eval(did_move):
+          name = did_move.decl().name()
+          _, src, dst, time = problem.parse_move(name)
+          return [(elems, src)], time
+      for this_part_here in partition_here_vars:
+        # this_part_here = zz.And(...)
+        if model.eval(this_part_here):
+          ret = []
+          for var in this_part_here.children():
+            name = var.decl().name()
+            subset, _, _ = problem.parse_node(name)
+            ret.append((subset, loc))
+          return ret, time
+    raise ValueError(f"get_inns passed to Sol.solve: could not find \"{elems}\" @ {loc}")
+
+  pending = []
+  for elems, locs in problem.fini_elems_locs_list:
+    for loc in locs:
+      inns, time = get_inns(elems, loc)
+      pending.append((elems, loc, inns, time))
+  pending.sort(key = lambda x: x[-1])
+
+  items = []
+  while len(pending) > 0:
+    items.append(pending.pop())
+    for inn_elems, inn_loc in items[-1][2]:
+      found = False
+      for p_elems, p_loc, _, _ in pending:
+        if inn_elems == p_elems and inn_loc == p_loc:
+          found = True
+          break
+      if not found:
+        inn_inns, inn_time = get_inns(inn_elems, inn_loc)
+        pending.append((inn_elems, inn_loc, inn_inns, inn_time))
+    pending.sort(key = lambda x: x[-1])
+
+  # items: list of (elems, loc, inns, time)
+  return items
+
 def solve_problem(problem, use_full_solver_interface = True):
   if not use_full_solver_interface:
     sat = problem.full_problem()

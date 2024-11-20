@@ -140,7 +140,7 @@ graph_t builder_create_graph(
     }
   }
 
-  // This will prevent us from allocating over any of the 
+  // This will prevent us from allocating over any of the
   // output tids
   ret.set_min_tensor_id(info.out_tids.back() + 1);
 
@@ -151,8 +151,8 @@ graph_t builder_create_graph(
   vector<int> node_to_tensor(sol.nodes.size(), -1);
   vector<hrect_t<uint64_t>> node_regions(sol.nodes.size());
 
-  auto get_set_hrect_and_is_overlapping = 
-    [&](vector<sol_t::which_t> const& inns) 
+  auto get_set_hrect_and_is_overlapping =
+    [&](vector<sol_t::which_t> const& inns)
       -> tuple<hrect_t<uint64_t>, bool>
   {
     vector<hrect_t<uint64_t>> hrects;
@@ -163,7 +163,7 @@ graph_t builder_create_graph(
         hrects.push_back(node_regions.at(inn.node_id));
       }
     }
-    
+
     hrect_t<uint64_t> ret = hrects[0];
     for(int h = 1; h != hrects.size(); ++h) {
       hrect_t<uint64_t> const& eh = hrects[h];
@@ -184,6 +184,43 @@ graph_t builder_create_graph(
     }
     return { ret, false };
   };
+
+  vector<set<int>> time_deps;
+  map<int, int> sol_id_to_graph_id;
+  map<int, set<int>> graph_deps_at_time;
+
+  auto get_time_deps = [&](int time) {
+    if(graph_deps_at_time.count(time) > 0) {
+      return graph_deps_at_time.at(time);
+    }
+
+    set<int> ret;
+    for(int const& sol_id: time_deps.at(time)) {
+      ret.insert(sol_id_to_graph_id.at(sol_id));
+    }
+
+    graph_deps_at_time.insert({ time, ret });
+
+    return ret;
+  };
+
+  bool time_is_set = sol.time_is_set();
+  time_is_set = false;
+  if(time_is_set) {
+    for(int node_id = 0; node_id != sol.nodes.size(); ++node_id) {
+      auto const& node = sol.nodes.at(node_id);
+      if(time_deps.size() <= node.time) {
+        time_deps.resize(node.time+1);
+      }
+      time_deps[node.time].insert(node_id);
+    }
+
+    for(int time = 1; time != time_deps.size(); ++time) {
+      if(time_deps[time-1].size() == 0) {
+        throw std::runtime_error("all prev time points need elements");
+      }
+    }
+  }
 
   // Step 2:
   //   For each node in reverse order,
@@ -244,7 +281,21 @@ graph_t builder_create_graph(
         touch.castable = maybe_castable;
       }
 
-      ret.touch_unto(touch, inn_tensor_id, out_tensor_id);
+      int graph_id;
+      if(time_is_set && node.time > 0) {
+        // In this case, make sure we don't do these ops
+        // before the previous time has completed
+        graph_id = ret.touch_unto(
+          touch, inn_tensor_id, out_tensor_id,
+          get_time_deps(node.time - 1)
+        );
+      } else {
+        graph_id = ret.touch_unto(touch, inn_tensor_id, out_tensor_id);
+      }
+
+      if(time_is_set) {
+        sol_id_to_graph_id.insert({node_id, graph_id});
+      }
     }
   }
 

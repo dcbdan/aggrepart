@@ -4,6 +4,13 @@
 #include "../repr/placement.h"
 
 struct sol_t {
+  struct direct_t {
+    set<int> elems;
+    int loc;
+    int time;
+    vector<tuple<set<int>, int>> inns;
+  };
+
   struct info_t {
     set<int> elems;
     int loc;
@@ -29,6 +36,9 @@ struct sol_t {
   };
 
   sol_t(
+    vector<direct_t> const& solved_nodes,
+    map<int, set<int>> const& init_locs);
+  sol_t(
     vector<info_t> const& fini_state,
     map<int, set<int>> const& init_locs);
 
@@ -43,6 +53,8 @@ struct sol_t {
     // the node is set
     vector<which_t> inns; // node_ids
 
+    int time;
+
     bool is_set() const {
       return inns.size() > 0;
     }
@@ -55,6 +67,7 @@ struct sol_t {
   void chain(int which_node, int loc);
 
   bool is_set() const;
+  bool time_is_set() const;
 
   vector<node_t> nodes;
 
