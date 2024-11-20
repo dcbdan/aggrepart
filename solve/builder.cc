@@ -194,18 +194,28 @@ graph_t builder_create_graph(
       return graph_deps_at_time.at(time);
     }
 
-    set<int> ret;
+    set<int> deps;
     for(int const& sol_id: time_deps.at(time)) {
-      ret.insert(sol_id_to_graph_id.at(sol_id));
+      if(sol_id_to_graph_id.count(sol_id) == 0) {
+        throw std::runtime_error("could not find sol_id's graph id!");
+      }
+      deps.insert(sol_id_to_graph_id.at(sol_id));
     }
 
-    graph_deps_at_time.insert({ time, ret });
+    int barrier_id = ret.barrier(deps);
 
-    return ret;
+    set<int> just_barrier({ barrier_id });
+
+    graph_deps_at_time.insert({ time, just_barrier });
+
+    return just_barrier;
   };
 
   bool time_is_set = sol.time_is_set();
-  time_is_set = false;
+  time_is_set = false; // TODO: not only does this occasionally not have
+                       //       all the deps available, it is probably wrong
+                       // TODO: Either figure out how time should be incorporated,
+                       //       probably from the z3 side, or delete entirely
   if(time_is_set) {
     for(int node_id = 0; node_id != sol.nodes.size(); ++node_id) {
       auto const& node = sol.nodes.at(node_id);

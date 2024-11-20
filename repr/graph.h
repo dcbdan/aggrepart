@@ -57,7 +57,7 @@ struct graph_t {
   struct move_t {
     int src_loc;
     int dst_loc;
-    uint64_t elem; 
+    uint64_t elem;
   };
 
   struct fill_t {
@@ -65,18 +65,23 @@ struct graph_t {
     uint64_t elem;
   };
 
+  struct barrier_t {
+  };
+
   struct node_t {
-    std::variant<touch_t, move_t, fill_t> op;
+    std::variant<touch_t, move_t, fill_t, barrier_t> op;
     int inn_tensor_id; // note used when fill_t
     int out_tensor_id;
 
-    bool is_touch() const { return std::holds_alternative<touch_t>(op); }
-    bool is_move()  const { return std::holds_alternative<move_t>(op);  }
-    bool is_fill()  const { return std::holds_alternative<fill_t>(op);  }
+    bool is_touch()   const { return std::holds_alternative<touch_t>(op);   }
+    bool is_move()    const { return std::holds_alternative<move_t>(op);    }
+    bool is_fill()    const { return std::holds_alternative<fill_t>(op);    }
+    bool is_barrier() const { return std::holds_alternative<barrier_t>(op); }
 
-    touch_t const& get_touch() const { return std::get<touch_t>(op); }
-    move_t  const& get_move()  const { return std::get<move_t>(op);  }
-    fill_t  const& get_fill()  const { return std::get<fill_t>(op);  }
+    touch_t   const& get_touch()   const { return std::get<touch_t>(op);   }
+    move_t    const& get_move()    const { return std::get<move_t>(op);    }
+    fill_t    const& get_fill()    const { return std::get<fill_t>(op);    }
+    barrier_t const& get_barrier() const { return std::get<barrier_t>(op); }
 
     set<int> deps;
     set<int> outs;
@@ -94,6 +99,9 @@ struct graph_t {
     touch_t const& op,
     int inn_tensor_id, int out_tensor_id,
     set<int> direct_deps = {});
+
+  // Insert a barrier node
+  int barrier(set<int> direct_deps = {});
 
   // Allocate a temporary tensor
   int alloc(int loc, vector<uint64_t> shape);
@@ -115,7 +123,7 @@ struct graph_t {
   set<int> out_tensors() const;
 
   int insert_node(
-    std::variant<touch_t, move_t, fill_t> op,
+    std::variant<touch_t, move_t, fill_t, barrier_t> op,
     int inn_tensor_id,
     int out_tensor_id,
     set<int> const& deps);
@@ -137,6 +145,17 @@ struct graph_t {
   vector<node_t> nodes;
   map<int, tensor_t> tensors;
   int _min_tensor_id;
+
+  // Get whether or not there is a directed path from
+  // bot to top
+  bool depends_on(int top, int bot) const;
+  // For every node, store a vector of 1s and 0s for all nodes
+  // that will execute before this node executes.
+  // Note also that all_deps[i] has length i--that is,
+  // 0,1,2,3,4,.. is a valid order of the graph.
+  vector<vector<char>> all_deps;
+  bool prune_edges;
+
 };
 
 std::ostream& operator<<(std::ostream& out, graph_t::tensor_type_t const& tt);

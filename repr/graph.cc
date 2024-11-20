@@ -1,7 +1,7 @@
 #include "graph.h"
 
 graph_t::graph_t(dtype_t d, optional<castable_t> c)
-  : dtype(d), castable(c), _min_tensor_id(0)
+  : dtype(d), castable(c), _min_tensor_id(0), prune_edges(true)
 {}
 
 graph_t::tensor_t::tensor_t()
@@ -153,6 +153,10 @@ int graph_t::touch(
   return ret;
 }
 
+int graph_t::barrier(set<int> deps) {
+  return insert_node(barrier_t {}, -1, -1, deps);
+}
+
 void graph_t::set_min_tensor_id(int new_val) {
   _min_tensor_id = new_val;
 }
@@ -178,20 +182,78 @@ int graph_t::num_locations() const {
 }
 
 int graph_t::insert_node(
-  std::variant<touch_t, move_t, fill_t> op,
+  std::variant<touch_t, move_t, fill_t, barrier_t> op,
   int inn_tensor_id,
   int out_tensor_id,
   set<int> const& deps)
 {
+  // Note that deps may include dependencies that are shadowed
+  // by other dependencies.
+  // Consider inserting node 2 where deps = {0,1} but 0->1 is already
+  // an dependency.
+  //
+  // In this case, adding the 0->2 is shadowd by 1, so nodes[2].inns
+  // should only contain {1}.
+  //
+  //    0------.
+  //    |      |
+  //    |      v
+  //    |      1
+  //    -->2<--.
+
+  set<int> inns;
+  if(prune_edges) {
+    vector<int> deps_vec(deps.begin(), deps.end());
+    if(deps_vec.size() == 0) {
+      //
+    } else if(deps_vec.size() == 1) {
+      inns.insert(deps_vec[0]);
+    } else {
+      std::sort(deps_vec.begin(), deps_vec.end(), std::greater<int>());
+      set<int> unnec;
+      for(int i = 0; i != deps_vec.size(); ++i) {
+        int const& id = deps_vec[i];
+        if(unnec.count(id) == 0) {
+          if(i != deps_vec.size() - 1) {
+            for(int j = i + 1; j != deps_vec.size(); ++j) {
+              int const& jd = deps_vec[j];
+              if(depends_on(id, jd))
+              {
+                unnec.insert(jd);
+              }
+            }
+          }
+          inns.insert(id);
+        }
+      }
+    }
+  } else {
+    inns = deps;
+  }
+
   nodes.push_back(node_t {
     .op = op,
     .inn_tensor_id = inn_tensor_id,
     .out_tensor_id = out_tensor_id,
-    .deps = deps });
+    .deps = inns });
   int ret = nodes.size() - 1;
 
-  for(int const& dep: deps) {
+  for(int const& dep: inns) {
     nodes.at(dep).outs.insert(ret);
+  }
+
+  if(prune_edges) {
+    all_deps.emplace_back(ret, 0);
+
+    vector<char> &ret_deps = all_deps.back();
+    for(int const& inn : inns) {
+      ret_deps[inn] = 1;
+
+      vector<char> &inn_deps = all_deps[inn];
+      for(int i = 0; i != inn_deps.size(); ++i) {
+        ret_deps[i] = std::max(ret_deps[i], inn_deps[i]);
+      }
+    }
   }
 
   return ret;
@@ -217,15 +279,19 @@ void graph_t::print_graphviz(std::ostream& out) const {
       label += "):";
     } else if(node.is_fill()) {
       label += "fill:";
+    } else if(node.is_barrier()) {
+      label += "barrier";
     } else {
       throw std::runtime_error("should not happen: missing node case");
     }
 
-    if(!node.is_fill()) {
-      label += "tid" + write_with_ss(node.inn_tensor_id);
-      label += "->";
+    if(!node.is_barrier()) {
+      if(!node.is_fill()) {
+        label += "tid" + write_with_ss(node.inn_tensor_id);
+        label += "->";
+      }
+      label += "tid" + write_with_ss(node.out_tensor_id);
     }
-    label += "tid" + write_with_ss(node.out_tensor_id);
 
     out << tab
       << "n" << id
@@ -337,7 +403,7 @@ int graph_t::touch_unto(
   }
 
   if(do_touch_output) {
-    // touch into the output 
+    // touch into the output
     int x = touch(
       op.write_to_out(),
       move_dst_tensor, out_tensor_id,
@@ -347,6 +413,14 @@ int graph_t::touch_unto(
 
   int ret = *curr_deps.begin();
   return ret;
+}
+
+bool graph_t::depends_on(int top, int bot) const {
+  if(top > bot) {
+    return all_deps[top][bot];
+  } else {
+    return false;
+  }
 }
 
 std::ostream& operator<<(std::ostream& out, graph_t::tensor_type_t const& tt)
