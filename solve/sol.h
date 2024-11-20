@@ -7,7 +7,6 @@ struct sol_t {
   struct direct_t {
     set<int> elems;
     int loc;
-    int time;
     vector<tuple<set<int>, int>> inns;
   };
 
@@ -53,8 +52,6 @@ struct sol_t {
     // the node is set
     vector<which_t> inns; // node_ids
 
-    int time;
-
     bool is_set() const {
       return inns.size() > 0;
     }
@@ -67,7 +64,6 @@ struct sol_t {
   void chain(int which_node, int loc);
 
   bool is_set() const;
-  bool time_is_set() const;
 
   vector<node_t> nodes;
 

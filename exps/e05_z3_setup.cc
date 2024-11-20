@@ -314,7 +314,6 @@ int main(int argc, char** argv) {
         z3_solution.push_back(sol_t::direct_t {
           .elems = elems,
           .loc = loc,
-          .time = time,
           .inns = inns
         });
         DOUT(elems << "@" << loc << "|t=" << time);

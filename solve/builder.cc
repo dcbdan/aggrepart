@@ -185,52 +185,7 @@ graph_t builder_create_graph(
     return { ret, false };
   };
 
-  vector<set<int>> time_deps;
   map<int, int> sol_id_to_graph_id;
-  map<int, set<int>> graph_deps_at_time;
-
-  auto get_time_deps = [&](int time) {
-    if(graph_deps_at_time.count(time) > 0) {
-      return graph_deps_at_time.at(time);
-    }
-
-    set<int> deps;
-    for(int const& sol_id: time_deps.at(time)) {
-      if(sol_id_to_graph_id.count(sol_id) == 0) {
-        throw std::runtime_error("could not find sol_id's graph id!");
-      }
-      deps.insert(sol_id_to_graph_id.at(sol_id));
-    }
-
-    int barrier_id = ret.barrier(deps);
-
-    set<int> just_barrier({ barrier_id });
-
-    graph_deps_at_time.insert({ time, just_barrier });
-
-    return just_barrier;
-  };
-
-  bool time_is_set = sol.time_is_set();
-  time_is_set = false; // TODO: not only does this occasionally not have
-                       //       all the deps available, it is probably wrong
-                       // TODO: Either figure out how time should be incorporated,
-                       //       probably from the z3 side, or delete entirely
-  if(time_is_set) {
-    for(int node_id = 0; node_id != sol.nodes.size(); ++node_id) {
-      auto const& node = sol.nodes.at(node_id);
-      if(time_deps.size() <= node.time) {
-        time_deps.resize(node.time+1);
-      }
-      time_deps[node.time].insert(node_id);
-    }
-
-    for(int time = 1; time != time_deps.size(); ++time) {
-      if(time_deps[time-1].size() == 0) {
-        throw std::runtime_error("all prev time points need elements");
-      }
-    }
-  }
 
   // Step 2:
   //   For each node in reverse order,
@@ -291,21 +246,8 @@ graph_t builder_create_graph(
         touch.castable = maybe_castable;
       }
 
-      int graph_id;
-      if(time_is_set && node.time > 0) {
-        // In this case, make sure we don't do these ops
-        // before the previous time has completed
-        graph_id = ret.touch_unto(
-          touch, inn_tensor_id, out_tensor_id,
-          get_time_deps(node.time - 1)
-        );
-      } else {
-        graph_id = ret.touch_unto(touch, inn_tensor_id, out_tensor_id);
-      }
-
-      if(time_is_set) {
-        sol_id_to_graph_id.insert({node_id, graph_id});
-      }
+      int graph_id = ret.touch_unto(touch, inn_tensor_id, out_tensor_id);
+      sol_id_to_graph_id.insert({node_id, graph_id});
     }
   }
 
