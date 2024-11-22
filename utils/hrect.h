@@ -20,6 +20,23 @@ bool hrect_has_intersect(
   hrect_t<uint64_t> const& rhs);
 
 template <typename T>
+void
+hrect_union_inplace(
+  hrect_t<T>& ret,
+  hrect_t<T> const& other)
+{
+  if(ret.size() != other.size()) {
+    throw std::runtime_error("invalid hrect union");
+  }
+  for(int i = 0; i != ret.size(); ++i) {
+    auto& [b,e] = ret[i];
+    auto const& [ob, oe] = other[i];
+    b = std::min(b, ob);
+    e = std::max(e, oe);
+  }
+}
+
+template <typename T>
 T hrect_size(hrect_t<T> const& hrect)
 {
   T ret = 1;

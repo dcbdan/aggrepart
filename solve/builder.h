@@ -2,6 +2,7 @@
 #include "../utils/setup.h"
 
 #include "sol.h"
+#include "exec_list.h"
 
 #include "../repr/graph.h"
 #include "../repr/relation.h"
@@ -39,3 +40,13 @@ graph_t builder_create_graph(
   dtype_t dtype,
   optional<castable_t> maybe_castable);
 
+// Construct a graph and the output relation given
+// an execution list
+tuple<graph_t, relation_t>
+builder_create_graph_from_list(
+  exec_list_t const& exec_list, // the integer elements in this list refer to
+                                // idxs in refi_rel
+  relation_t const& refi_rel,
+  placement_t const& out_pl,
+  dtype_t dtype,
+  optional<castable_t> maybe_castable);
