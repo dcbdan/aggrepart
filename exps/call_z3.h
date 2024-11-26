@@ -45,7 +45,8 @@ struct z3_inputs_t {
   //       building subset_infos in a different way, don't use this function.
   static z3_inputs_t init(
     placement_t const& refi_pl,
-    placement_t const& fini_pl)
+    placement_t const& fini_pl,
+    int size_multiplier = 1)
   {
     vector<int> refi_shape_partial = refi_pl.locations.get_shape();
 
@@ -116,6 +117,7 @@ struct z3_inputs_t {
         auto const& [b,e] = r[i];
         size *= (e-b);
       }
+
       // Note: the size isn't really accurate unless everything is square,
       //       right?
       // TODO
@@ -158,6 +160,10 @@ struct z3_inputs_t {
           subset_infos.push_back(subset_info_t::init(set<int>{ elem }, 1));
         }
       }
+    }
+
+    for(subset_info_t& info: subset_infos) {
+      info.size *= size_multiplier;
     }
 
     return z3_inputs_t {
