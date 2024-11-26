@@ -1,5 +1,5 @@
 from sys import stdin, stdout, stderr
-from problem import Problem, solve_problem_v2
+from problem import Problem, solve_problem_v2, solve_problem_v3
 
 def correct_io_object(obj):
   obj.print = lambda msg: obj.write(msg + "\n")
@@ -126,7 +126,7 @@ class ReaderWriter:
 
     return init_info, fini_info, subsets, sizes, partitions, resources
 
-  def print_solution(self, info):
+  def print_solution_v2(self, info):
     # each info contains elems, loc, inns, time
     #   where elems = set of locs
     #         loc   = location
@@ -139,6 +139,26 @@ class ReaderWriter:
       msg = msg[:-1]
       stdout.print(msg)
     stdout.print("done")
+
+  def print_solution_v3(self, items):
+    for item in items:
+      op = item[0]
+      if op == "move":
+        _, elems, src, dst, start_time, end_time = item
+        msg = "move|" + self.write_elems(elems) + "|"
+        msg += str(src) + "|" + str(dst) + "|"
+        msg += str(start_time) + "|" + str(end_time)
+        stdout.print(msg)
+      elif op == "form":
+        _, elems, loc, time, inn_parts = item
+        msg = "form|" + self.write_elems(elems) + "|"
+        msg += str(loc) + "|" + str(time) + "|"
+        for subset in inn_parts:
+          msg += self.write_elems(subset) + "|"
+        msg = msg[:-1]
+        stdout.print(msg)
+      else:
+        raise ValueError("invalid; should be move or form")
 
 def example_debugger():
   with open("debug", "w") as debug:
@@ -196,10 +216,12 @@ if __name__ == "__main__":
       resources,
       max_time)
 
-    maybe = solve_problem_v2(problem)
+    maybe = solve_problem_v3(problem)
     if maybe is not None:
-      self.print_solution(maybe)
+      stdout.print("sat")
+      self.print_solution_v3(maybe)
       success = True
+      stdout.print("done")
       break
   if not success:
     stdout.print("no-sat")

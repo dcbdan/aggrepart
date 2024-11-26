@@ -51,11 +51,12 @@ int main(int argc, char** argv) {
   args.set_default<bool>("canonical", true);
   args.set_default<uint64_t>("nrow", 10000);
   args.set_default<uint64_t>("ncol", 10000);
+  args.set_default<int>("nlocs", 8);
 
   bool canonical = args.get<bool>("canonical");
   uint64_t nrow = args.get<uint64_t>("nrow");
   uint64_t ncol = args.get<uint64_t>("ncol");
-  int nlocs = 4;
+  int nlocs = args.get<int>("nlocs");
 
   auto [init_pl, fini_pl] =
     canonical
@@ -64,9 +65,11 @@ int main(int argc, char** argv) {
 
   relation_t init_rel = relation_t::make_from_placement(init_pl);
 
-  auto [sol, builder_info, fini_rel] = builder_init_sol(init_rel, fini_pl);
-
+  map<int, set<int>> init_locs;
   {
+    auto [sol, builder_info, fini_rel] = builder_init_sol(init_rel, fini_pl);
+    init_locs = sol.init_locs;
+
     auto sol_naive = sol;
     DOUT(sol_naive);
 
@@ -260,15 +263,18 @@ int main(int argc, char** argv) {
       }
     }}
   };
-  _write_n_resources({0,1,2,3});
-  _write_n_resources({4,5,6,7});
-  for(int i = 0; i != 3; ++i) {
-    piper.write(write_with_ss(i) + "," + write_with_ss(i+4) + "\n");
+  for(int i = 0; i != 8; ++i) {
+    piper.write(write_with_ss(i) + "," + write_with_ss((i + 1) % 8) + "\n");
   }
+  //_write_n_resources({0,1,2,3});
+  //_write_n_resources({4,5,6,7});
+  //for(int i = 0; i != 3; ++i) {
+  //  piper.write(write_with_ss(i) + "," + write_with_ss(i+4) + "\n");
+  //}
   piper.write("stop\n");
 
   piper.write("start-init\n");
-  for(auto const& [elem, locs]: sol.init_locs) {
+  for(auto const& [elem, locs]: init_locs) {
     piper.write(write_with_ss(elem) + "|" + write_with_ss(locs) + "\n");
   }
   piper.write("stop\n");
@@ -281,59 +287,63 @@ int main(int argc, char** argv) {
 
   piper.write("end\n");
 
-  {
-    vector<sol_t::direct_t> z3_solution;
+  string maybe_success = piper.readline();
+  if(maybe_success == "sat") {
+    vector<exec_item_t> exec_list;
     string line;
     while(true) {
       line = piper.readline();
       if(line == "done") {
         break;
       }
-      if(line == "no-sat") {
-        throw std::runtime_error("could not solve");
-      }
-
-      vector<string> lines = split_line(line, '|');
-      // loc|time|elems|inn0|inn1|...
-      // 3|0|[4,5,6,7]|[4,5]@3|[6,7]@3
-
-      int loc = parse_with_ss<int>(lines[0]);
-      int time = parse_with_ss<int>(lines[1]);
-      set<int> elems = parse_set<int>(lines[2]);
-      vector<tuple<set<int>, int>> inns;
-      for(int idx = 3; idx != lines.size(); ++idx) {
-        vector<string> ls = split_line(lines[idx], '@');
-        if(ls.size() != 2) {
-          throw std::runtime_error("could not split inns into two along '@'");
-        }
-        inns.emplace_back(
-          parse_set<int>(ls.at(0)),
-          parse_with_ss<int>(ls.at(1)));
-      }
-      if(inns.size() > 0) {
-        z3_solution.push_back(sol_t::direct_t {
-          .elems = elems,
-          .loc = loc,
-          .inns = inns
+      DOUT(line);
+      vector<string> words = split_line(line, '|');
+      // 0    1     2   3    4          5
+      // move|elems|src|dst |start_time|end_time
+      // form|elems|loc|time|part0|part1|...
+      if(words[0] == "move") {
+        exec_list.emplace_back(exec_item_t::move_t {
+          .elems      = parse_set<int>(words[1]),
+          .src        = parse_with_ss<int>(words[2]),
+          .dst        = parse_with_ss<int>(words[3]),
+          .start_time = parse_with_ss<int>(words[4]),
+          .end_time   = parse_with_ss<int>(words[5])
         });
-        DOUT(elems << "@" << loc << "|t=" << time);
-        for(auto const& [elems, loc]: inns) {
-          DOUT("  " << elems << "@" << loc);
+      } else if(words[0] == "form") {
+        vector<set<int>> inns;
+        for(int i = 4; i != words.size(); ++i) {
+          inns.push_back(parse_set<int>(words[i]));
         }
+        exec_list.emplace_back(exec_item_t::form_t {
+          .elems      = parse_set<int>(words[1]),
+          .loc        = parse_with_ss<int>(words[2]),
+          .time       = parse_with_ss<int>(words[3]),
+          .inn_elems  = inns
+        });
       } else {
-        // If there are no inns from the z3 solution, it is an input node
+        throw std::runtime_error("invalid");
       }
     }
 
-    sol_t sol_z3(z3_solution, sol.init_locs);
-    DOUT(sol_z3);
+    DOUT("//////////////////////////////////////////////////");
+    for(auto const& op: exec_list) {
+      DOUT(op);
+    }
+    DOUT("//////////////////////////////////////////////////");
 
-    graph_t graph = builder_create_graph(sol_z3, builder_info, dtype, castable);
+    auto [graph, fini_rel] = builder_create_graph_from_list(
+      exec_list,
+      init_rel,
+      fini_pl,
+      dtype, castable);
+    DOUT("INIT REL");
+    init_rel.print_lines(std::cout);
+    DOUT("FINI REL");
+    fini_rel.print_lines(std::cout);
 
     std::ofstream f("g_z3.gv");
     graph.print_graphviz(f);
     DOUT("printed g_z3.gv");
   }
-
 }
 

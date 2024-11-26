@@ -286,10 +286,18 @@ struct block_mapping_t {
   }
 
   int get_idx(hrect_t<int> const& h) const {
-    return hrect_to_idx.at(h);
+    auto iter = hrect_to_idx.find(h);
+    if(iter == hrect_to_idx.end()) {
+      throw std::runtime_error("block mapping, get_idx for hrect: invalid key");
+    }
+    return iter->second;
   }
   int get_idx(set<int> const& elems) const {
-    return elems_to_idx.at(elems);
+    auto iter = elems_to_idx.find(elems);
+    if(iter == elems_to_idx.end()) {
+      throw std::runtime_error("block mapping, get_idx for elems: invalid key");
+    }
+    return iter->second;
   }
   optional<int> get_maybe(hrect_t<int> const& h) {
     auto iter = hrect_to_idx.find(h);
@@ -415,7 +423,7 @@ struct exec_list_state_t {
         for(auto const& [loc, tensor_id]: to_tensor_id) {
           graph.alloc_(tensor_id, loc, shape, graph_t::tensor_type_t::tt_inn);
         }
-        mapping.data[mapping_idx].loc_to_tensor_id = to_tensor_id;
+        mapping.data.at(mapping_idx).loc_to_tensor_id = to_tensor_id;
       }
     }
 
@@ -458,9 +466,9 @@ struct exec_list_state_t {
             elems,
             tensor_region);
         }();
-        auto& datum = mapping.data[mapping_index];
+        auto& datum = mapping.data.at(mapping_index);
 
-        set<int> const& locs = out_pl.locations.at(out_bid);
+        set<int> const& locs = out_pl.get_locs(out_bid, 0);
         for(int const& loc: locs) {
           if(datum.loc_to_tensor_id.count(loc) == 0) {
             int tid = graph.alloc_(loc, hrect_shape(tensor_region), graph_t::tt_out);
@@ -470,7 +478,7 @@ struct exec_list_state_t {
 
         // Now the mapping has all the tids, and we need all the tids at
         // the relation as well
-        map<int, int>& loc_to_tid = out_rel.locations.at(out_bid);
+        map<int, int>& loc_to_tid = out_rel.get_locs(out_bid, 0);
         loc_to_tid = datum.loc_to_tensor_id;
       } while(increment_idxs(out_shape, out_bid));
     }
@@ -495,7 +503,7 @@ struct exec_list_state_t {
   }
 
   int move(set<int> const& elems, int src, int dst, set<int> deps) {
-    auto& d = mapping.data[mapping.get_idx(elems)];
+    auto& d = mapping.data.at(mapping.get_idx(elems));
 
     int src_id = d.loc_to_tensor_id.at(src);
 
@@ -519,7 +527,7 @@ struct exec_list_state_t {
       maybe = mapping.insert(refi_region, elems, tensor_region);
     }
 
-    auto& d_out = mapping.data[maybe.value()];
+    auto& d_out = mapping.data.at(maybe.value());
     int out_id;
     {
       auto iter = d_out.loc_to_tensor_id.find(loc);
@@ -533,7 +541,7 @@ struct exec_list_state_t {
 
     vector<int> ret;
     for(set<int> const& inn_es: inn_elems) {
-      auto const& d_inn = mapping.data[mapping.get_idx(inn_es)];
+      auto const& d_inn = mapping.data.at(mapping.get_idx(inn_es));
       touch_t touch = d_out.has_aggregation()
         ? touch_t::intersect(
             d_inn.tensor_region, d_out.tensor_region,

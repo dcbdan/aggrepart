@@ -166,12 +166,12 @@ class Problem:
     return zz.Or(*ret)
 
   # TODO: too much code duplication
-  def iff_vars(self, elems, loc, time):
+  def iff_vars(self, elems, loc, time, m_as_list = True, p_as_list = True):
     partitions = self.get_all_partitions(elems)
     sz = self.get_subset_size(elems)
 
-    moved_here = self._moved_to(elems, sz, loc, time, as_list = True)
-    partition_here = self._has_partition_here(partitions, loc, time, as_list = True)
+    moved_here = self._moved_to(elems, sz, loc, time, as_list = m_as_list)
+    partition_here = self._has_partition_here(partitions, loc, time, as_list = p_as_list)
 
     return moved_here, partition_here
 
@@ -281,7 +281,188 @@ class Problem:
       self.constrain_resources(),
       self.init_fini_time())
 
+def solve_problem_v3(problem):
+  """
+  Return a sequence of:
+    move: elems, src, dst, start_time, end_time
+    form: elems, loc, time, list of inn_elems
+  """
+  s = zz.Solver()
+  s.add(problem.full_problem())
+  if s.check() != zz.sat:
+    return None
+  model = s.model()
+  decls = model.decls()
+  has_vars = set(x.name() for x in decls)
+
+  def has_var(var):
+    name = var.decl().name()
+    return name in has_vars
+
+  def _eval_maybe_bool(maybe):
+    if type(maybe) == type(True):
+      return maybe
+    else:
+      return model.eval(maybe)
+
+  ret = []
+  for time in range(0, problem.max_time + 1):
+    if time < problem.max_time:
+      # add all the moves that start at `time`
+      for (src,dst), resource in problem.resource_counts_dict.items():
+        for var in problem._all_moves_starting_at(src, dst, time):
+          if has_var(var) and model.eval(var):
+            name = var.decl().name()
+            elems, _, _, _ = problem.parse_move(name)
+            sz = problem.get_subset_size(elems)
+            ntime = (sz + resource - 1) // resource
+            fini_time = time + ntime
+            ret.append(("move", elems, src, dst, time, fini_time))
+
+    # add all the forms that start at `time`
+    # note that time 0 is special
+    if time == 0:
+      for elems in problem.all_subsets:
+        if len(elems) > 1:
+          for loc in sorted(problem.all_locs):
+            var = problem.mk_node(elems, loc, time)
+            if has_var(var) and model.eval(var):
+              ret.append(("form", elems, loc, time, [elem for elem in elems]))
+      continue
+    for elems in problem.all_subsets:
+      for loc in sorted(problem.all_locs):
+        var = problem.mk_node(elems, loc, time)
+        if has_var(var) and model.eval(var):
+          moved_here, partition_here_vars = problem.iff_vars(
+            elems, loc, time, m_as_list=False, p_as_list = True)
+
+          if _eval_maybe_bool(moved_here):
+            # this variable was moved here, and the move has already been
+            # accounted for, so there is no need to add a form object to ret
+            pass
+          else:
+            partition = []
+            for this_part_here in partition_here_vars:
+              # this_part_here = zz.And(...)
+              if model.eval(this_part_here):
+                # all the vars are indeed here
+                for var in this_part_here.children():
+                  name = var.decl().name()
+                  subset, _, _ = problem.parse_node(name)
+                  partition.append(subset)
+                break
+            if len(partition) == 0:
+              # in this case, this node is available from the previous time
+              # so we don't need to include it to ret
+              pass
+            else:
+              ret.append(("form", elems, loc, time, partition))
+
+  # Ok, the sorting is tricky
+  # 1. Given a start time, make sure that forms come before move,
+  #    since we have to form an element before it is to be moved.
+  #    Forming takes no time, so you may form and then move at a single start time.
+  #    Since every move takes positive time, you can't move to dst and then form
+  #    with it at that same start time.
+  # 2. Within a start time, make sure smaller forms come before other forms.
+  #    Doing this makes it required that you have formed all sub partitions.
+  #    For example, (1) form {4,5,6,7} from {4,5} and {6,7} (2) form {4,5}
+  #    from {4}, {5} is not valid since {4,5} is not available to form {4,5,6,7}.
+  #    Instead, form {4,5} and then {4,5,6,7}.
+  def _get_start_time(x):
+    if x[0] == "form":
+      return x[3]
+    else:
+      return x[4]
+  def _get_done_time(x):
+    if x[0] == "form":
+      return x[3]
+    else:
+      return x[5]
+  def _get_dst_loc(x):
+    if x[0] == "form":
+      return x[2]
+    else:
+      return x[3]
+
+  def _start_time_by_form_then_move(x):
+    start_time = 2 * _get_start_time(x)
+    if x[0] == "form":
+      return start_time
+    else:
+      return start_time + 1
+  def _key(x):
+    start_time = _start_time_by_form_then_move(x)
+    if x[0] == "form":
+      return (start_time, len(x[1]))
+    else:
+      return (start_time, 0)
+
+  ret = list(sorted(ret, key=_key))
+
+  # Ok, another problme: It may be the case that we've formed a tensor at
+  # too many time points... Make sure we only form a tensor once.
+  invalid_idxs = set()
+  # elems, loc -> (time formed, move idx or None)
+  formed_at = {}
+  for elem, locs in problem.init_elem_locs_dict.items():
+    for loc in locs:
+      formed_at[(elem, loc)] = (0, None)
+  for idx, op in enumerate(ret):
+    t, elems = op[:2]
+    time = _get_done_time(op)
+    loc = _get_dst_loc(op)
+    key = (elems, loc)
+    record_idx = idx if t == "move" else None
+    if key in formed_at:
+      other_time, maybe_idx = formed_at[key]
+      if time < other_time:
+        if maybe_idx is not None:
+          raise ValueError("should not occur")
+        invalid_idxs.add(maybe_idx)
+        formed_at[key] = (time, record_idx)
+      else:
+        invalid_idxs.add(idx)
+    else:
+      formed_at[key] = (time, record_idx)
+
+  ret = [op for idx, op in enumerate(ret) if idx not in invalid_idxs]
+
+  # And another problem: we may have objects that aren't actually used to compute
+  # the final solution since z3 doesn't care about setting some of those things to
+  # true. So go through and mark only the values we need and remove the rest
+  def _is_fini_elem_loc(op):
+    elems = op[1]
+    loc = _get_dst_loc(op)
+    for fini_elems, fini_locs in problem.fini_elems_locs_list:
+      if elems == fini_elems and loc in fini_locs:
+        return True
+    return False
+
+  keeps = [_is_fini_elem_loc(op) for op in ret]
+  required = set()
+  for idx, op in reversed(list(enumerate(ret))):
+    t, elems = op[:2]
+    loc = _get_dst_loc(op)
+    key = (elems, loc)
+    if keeps[idx]:
+      required.add(key)
+    if key in required:
+      keeps[idx] = True
+      if t == "move":
+        src = op[2]
+        required.add((elems, src))
+      else:
+        for inns in op[-1]:
+          required.add((inns, loc))
+
+  ret = [op for op, keep in zip(ret, keeps) if keep]
+  return ret
+
 def solve_problem_v2(problem):
+  """
+  Attempt to construct something suitable for c++ sol_t object
+  """
   s = zz.Solver()
   s.add(problem.full_problem())
   if s.check() != zz.sat:
