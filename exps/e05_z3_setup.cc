@@ -9,39 +9,8 @@
 #include "../solve/sol.h"
 #include "../solve/builder.h"
 
+#include "call_z3.h"
 #include "problems.h"
-
-struct subset_info_t {
-  static subset_info_t init(set<int> const& elems, int size) {
-    subset_info_t ret;
-    ret.size = size;
-    ret.partitions.push_back({ elems });
-
-    return ret;
-  }
-
-  set<int> const& get_elems() const { return partitions[0][0]; }
-
-  void add_fineist_partition() {
-    set<int> const& elems = get_elems();
-    for(auto const& p: partitions) {
-      if(p.size() == elems.size()) {
-        // ok, we've already added the single element partition
-        return;
-      }
-    }
-
-    vector<set<int>> singleton_elems;
-    for(int const& elem: elems) {
-      singleton_elems.push_back(set<int>{ elem });
-    }
-    partitions.push_back(singleton_elems);
-  }
-
-  int size;
-  vector<vector<set<int>>> partitions;
-  // ^ partitions[0] = { elems }
-};
 
 int main(int argc, char** argv) {
   dtype_t dtype = dtype_t::f32;
@@ -65,10 +34,12 @@ int main(int argc, char** argv) {
 
   relation_t init_rel = relation_t::make_from_placement(init_pl);
 
-  map<int, set<int>> init_locs;
+  vector<tuple<int, set<int>>> init_locs;
   {
     auto [sol, builder_info, fini_rel] = builder_init_sol(init_rel, fini_pl);
-    init_locs = sol.init_locs;
+    for(auto const& x: sol.init_locs) {
+      init_locs.push_back(x);
+    }
 
     auto sol_naive = sol;
     DOUT(sol_naive);
@@ -229,101 +200,22 @@ int main(int argc, char** argv) {
     }
   }
 
-  DOUT("");
-  DOUT("piper stuff ----------------------");
-
-  string singularity = "/usr/bin/singularity";
-  string container = "/home/daniel/Containers/z3.sif";
-  string main_py = "/home/daniel/Projects/aggrepart/z3/src/main.py";
-  piper_t piper(singularity, vector<string>{ "exec", container, "python3", main_py });
-
-  piper.write("start-subsets\n");
-  for(auto const& info: ret) {
-    string msg = write_with_ss(info.size) + "|";
-    for(auto const& partition: info.partitions) {
-      for(auto const& subset: partition) {
-        msg += write_with_ss(subset);
-        msg += "@";
-      }
-      msg.resize(msg.size() - 1);
-      msg += "|";
-    }
-    msg.resize(msg.size() - 1);
-    msg += "\n";
-    piper.write(msg);
-  }
-  piper.write("stop\n");
-
-  piper.write("start-resources\n");
-  auto _write_n_resources = [&](vector<int> const& n) {
+  vector<tuple<int, int>> resources;
+  auto _add_resource_group = [&](vector<int> const& n) {
     for(int const& src: n) {
     for(int const& dst: n) {
       if(src != dst) {
-        piper.write(write_with_ss(src) + "," + write_with_ss(dst) + "\n");
+        resources.emplace_back(src, dst);
       }
     }}
   };
   for(int i = 0; i != 8; ++i) {
-    piper.write(write_with_ss(i) + "," + write_with_ss((i + 1) % 8) + "\n");
+    resources.emplace_back(i, (i + 1) % 8);
   }
-  //_write_n_resources({0,1,2,3});
-  //_write_n_resources({4,5,6,7});
-  //for(int i = 0; i != 3; ++i) {
-  //  piper.write(write_with_ss(i) + "," + write_with_ss(i+4) + "\n");
-  //}
-  piper.write("stop\n");
 
-  piper.write("start-init\n");
-  for(auto const& [elem, locs]: init_locs) {
-    piper.write(write_with_ss(elem) + "|" + write_with_ss(locs) + "\n");
-  }
-  piper.write("stop\n");
-
-  piper.write("start-fini\n");
-  for(auto const& [elems, locs]: fini_info) {
-    piper.write(write_with_ss(elems) + "|" + write_with_ss(locs) + "\n");
-  }
-  piper.write("stop\n");
-
-  piper.write("end\n");
-
-  string maybe_success = piper.readline();
-  if(maybe_success == "sat") {
-    vector<exec_item_t> exec_list;
-    string line;
-    while(true) {
-      line = piper.readline();
-      if(line == "done") {
-        break;
-      }
-      DOUT(line);
-      vector<string> words = split_line(line, '|');
-      // 0    1     2   3    4          5
-      // move|elems|src|dst |start_time|end_time
-      // form|elems|loc|time|part0|part1|...
-      if(words[0] == "move") {
-        exec_list.emplace_back(exec_item_t::move_t {
-          .elems      = parse_set<int>(words[1]),
-          .src        = parse_with_ss<int>(words[2]),
-          .dst        = parse_with_ss<int>(words[3]),
-          .start_time = parse_with_ss<int>(words[4]),
-          .end_time   = parse_with_ss<int>(words[5])
-        });
-      } else if(words[0] == "form") {
-        vector<set<int>> inns;
-        for(int i = 4; i != words.size(); ++i) {
-          inns.push_back(parse_set<int>(words[i]));
-        }
-        exec_list.emplace_back(exec_item_t::form_t {
-          .elems      = parse_set<int>(words[1]),
-          .loc        = parse_with_ss<int>(words[2]),
-          .time       = parse_with_ss<int>(words[3]),
-          .inn_elems  = inns
-        });
-      } else {
-        throw std::runtime_error("invalid");
-      }
-    }
+  auto maybe_sat = solve_with_z3(init_locs, fini_info, ret, resources);
+  if(maybe_sat) {
+    auto const& exec_list = maybe_sat.value();
 
     DOUT("//////////////////////////////////////////////////");
     for(auto const& op: exec_list) {
@@ -346,4 +238,3 @@ int main(int argc, char** argv) {
     DOUT("printed g_z3.gv");
   }
 }
-

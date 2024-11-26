@@ -1,3 +1,4 @@
+#pragma once
 #include "setup.h"
 
 // This class runs ./filename <args> and then
