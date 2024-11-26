@@ -68,3 +68,39 @@ hrect_t<uint64_t> relation_t::get_region(int elem) const {
   return partition.get_region(elem_to_block(elem));
 }
 
+map<int, int> const& relation_t::get_locs(vector<int> index, int partial) const
+{
+  index.push_back(partial);
+  return locations.at(index);
+}
+
+map<int, int> const& relation_t::get_locs(int block, int partial) const
+{
+  return get_locs(partition.block_to_index(block), partial);
+}
+
+map<int, int>& relation_t::get_locs(vector<int> index, int partial)
+{
+  index.push_back(partial);
+  return locations.at(index);
+}
+
+map<int, int>& relation_t::get_locs(int block, int partial)
+{
+  return get_locs(partition.block_to_index(block), partial);
+}
+
+void relation_t::print_lines(std::ostream& out) const {
+  out << "relation" << std::endl;
+  out << "  partition:    " << partition << std::endl;
+  out << "  num partials: " << num_partials() << std::endl;
+
+  auto locs_shape = locations.get_shape();
+  vector<int> bid(locs_shape.size());
+  do {
+    out << "  " << bid << std::endl;
+    for(auto const& [loc, tid]: locations.at(bid)) {
+      out << "    " << tid << "@" << loc << std::endl;
+    }
+  } while(increment_idxs(locs_shape, bid));
+}

@@ -29,4 +29,12 @@ struct relation_t {
   int index_to_elem(vector<int> const& index) const;
 
   hrect_t<uint64_t> get_region(int elem) const;
+
+  map<int, int> const& get_locs(vector<int> index, int partial) const;
+  map<int, int> const& get_locs(int block, int partial) const;
+
+  map<int, int>& get_locs(vector<int> index, int partial);
+  map<int, int>& get_locs(int block, int partial);
+
+  void print_lines(std::ostream& out) const;
 };

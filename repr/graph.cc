@@ -272,8 +272,9 @@ void graph_t::print_graphviz(std::ostream& out) const {
     if(node.is_touch()) {
       label += "touch:";
     } else if(node.is_move()) {
-      label += "move(";
+      color = "pink";
       auto const& m = node.get_move();
+      label += "move(";
       label += "loc" + write_with_ss(m.src_loc) + "->";
       label += "loc" + write_with_ss(m.dst_loc);
       label += "):";

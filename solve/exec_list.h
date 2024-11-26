@@ -16,6 +16,10 @@ struct exec_item_t {
     vector<set<int>> inn_elems;
   };
 
+  exec_item_t() {}
+  exec_item_t(move_t const& m): item(m) {}
+  exec_item_t(form_t const& f): item(f) {}
+
   std::variant<move_t, form_t> item;
 
   bool is_move() const { return std::holds_alternative<move_t>(item); }
@@ -33,3 +37,4 @@ struct exec_item_t {
 
 using exec_list_t = vector<exec_item_t>;
 
+std::ostream& operator<<(std::ostream& out, exec_item_t const& item);
